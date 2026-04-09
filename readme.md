@@ -1,10 +1,24 @@
 # 🧠 DocuMind — Document Q&A (RAG) + Analytics
 
+**Core Stack**
+
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110-teal?logo=fastapi)
 ![Streamlit](https://img.shields.io/badge/Streamlit-UI-red?logo=streamlit)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker)
+
+**AI / RAG**
+
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20DB-6C63FF)
 ![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?logo=google)
+![LangChain](https://img.shields.io/badge/LangChain-RAG-1C3C3C)
+
+**Delivery**
+
+[![CI](https://github.com/flxhrdyn/Documind/actions/workflows/ci.yml/badge.svg)](https://github.com/flxhrdyn/Documind/actions/workflows/ci.yml)
+[![CD](https://github.com/flxhrdyn/Documind/actions/workflows/sync-to-hf-space.yml/badge.svg)](https://github.com/flxhrdyn/Documind/actions/workflows/sync-to-hf-space.yml)
+![Hugging%20Face%20Spaces](https://img.shields.io/badge/Hugging%20Face-Spaces-FFD21E?logo=huggingface)
+![GitHub%20Actions](https://img.shields.io/badge/GitHub%20Actions-Automation-2088FF?logo=githubactions)
 
 **DocuMind** is an MVP-ready document question-answering system built with **FastAPI** (backend) and **Streamlit** (frontend). It runs a **RAG pipeline** (query rewriting → retrieval → reranking → answer generation) backed by **Qdrant**.
 
@@ -30,8 +44,9 @@ This repo does not ship public demo links by default. Local endpoints:
 
 For hosted deployments, this repo provides:
 
-- Dockerfiles for backend and frontend
-- A GitHub Actions workflow to deploy the **Streamlit frontend** to Hugging Face Spaces
+- A canonical all-in-one Dockerfile for Hugging Face Spaces (FastAPI + Streamlit)
+- An optional backend-only Dockerfile for local/dev use
+- A GitHub Actions workflow to deploy the **full Docker Space** (FastAPI + Streamlit)
 
 ---
 
@@ -45,7 +60,7 @@ When you have a set of PDF documents, it’s tedious to manually search for answ
 
 ```
 ┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│  Frontend   │─────▶│   FastAPI    │─────▶│     LLM     │
+│  Frontend   │────▶│   FastAPI    │─────▶│     LLM     │
 │ (Streamlit) │      │   Backend    │      │   (Gemini)  │
 └─────────────┘      └──────────────┘      └─────────────┘
        │                    │
@@ -82,6 +97,8 @@ Pipeline (high-level):
 | Embeddings | Sentence Transformers |
 | Reranker | CrossEncoder (sentence-transformers) |
 | Testing | pytest |
+| CI | GitHub Actions |
+| CD / Deployment | Hugging Face Spaces (Docker) |
 
 ---
 
@@ -190,25 +207,25 @@ use **Qdrant server/cloud mode** by setting `QDRANT_URL`.
 
 ## 🐳 Deployment
 
-### Docker (backend)
+### Docker (all-in-one)
 
 ```bash
-docker build -t documind-api .
-docker run -p 8000:8000 documind-api
+docker build -t documind .
+docker run -p 7860:7860 documind
 ```
 
-### Docker (frontend)
+Then open `http://localhost:7860`.
+
+### Docker (backend-only, optional)
 
 ```bash
-docker build -t documind-ui -f Dockerfile.streamlit .
-docker run -p 8501:8501 \
-  -e DOCUMIND_API_BASE_URL=http://host.docker.internal:8000 \
-  documind-ui
+docker build -t documind-api -f Dockerfile.api .
+docker run -p 8000:8000 documind-api
 ```
 
 ### Hugging Face Spaces (Docker) via CI/CD
 
-This repo includes a GitHub Actions workflow that syncs a clean “snapshot” of the repo to a Hugging Face **Docker** Space on every push to `main`.
+This repo includes a GitHub Actions workflow that syncs a clean snapshot of the repo to a Hugging Face **Docker** Space on every push to `main`.
 
 The Space runs a single container that starts:
 
@@ -217,19 +234,50 @@ The Space runs a single container that starts:
 
 1) Create a **Docker** Space on Hugging Face.
 
-2) In Space **Settings → Variables / Secrets**, set:
+2) Configure runtime values in the Space.
 
-- **Secret**: `GEMINI_API_KEY`
+Space path: **Settings -> Variables and secrets**
 
-Optional (advanced): `QDRANT_URL`, `QDRANT_API_KEY`, `DOCUMIND_DELETE_UPLOADED_PDFS=1`
+Secrets (recommended):
 
-3) In GitHub **Settings → Secrets and variables → Actions**, add:
+- `GEMINI_API_KEY` (required)
+- `QDRANT_API_KEY` (if using Qdrant Cloud)
 
-- `HF_TOKEN`: Hugging Face access token with write access
+Variables (recommended):
+
+- `QDRANT_URL` (if using Qdrant Cloud)
+- `DOCUMIND_DELETE_UPLOADED_PDFS=1` (optional, useful on ephemeral disks)
+- `QDRANT_PREFER_GRPC=0` (optional; HTTP/REST is often more reliable)
+
+3) Configure deployment credentials in GitHub Actions.
+
+GitHub path: **Settings -> Secrets and variables -> Actions**
+
+Repository secrets:
+
+- `HF_TOKEN`: Hugging Face token with **write** permission
 - `HF_SPACE_ID`: `username/space-name`
-- (Optional) `HF_SPACE_BRANCH`: defaults to `main`
+- `HF_SPACE_BRANCH`: `main` (optional)
+
+4) Push to `main` (or run the workflow manually from the Actions tab).
 
 Workflow file: `.github/workflows/sync-to-hf-space.yml`
+
+Space card source file in this repo: `README.hf.md`
+
+#### Secrets vs Variables quick rule
+
+- Use **Secrets** for credentials/tokens/API keys.
+- Use **Variables** for non-sensitive config flags and URLs.
+
+#### Common Spaces form mistake (important)
+
+When adding values in Hugging Face Spaces:
+
+- The **Key** field must contain only the variable name, for example `QDRANT_API_KEY`.
+- The **Value** field must contain only the value.
+- Do **not** paste full `.env` lines like `QDRANT_API_KEY="..."` into Key.
+- Avoid extra spaces around `=` in `.env` files.
 
 ---
 
@@ -243,8 +291,10 @@ documind-test/
 ├── uploaded_docs/           # Local PDF storage (optional)
 ├── qdrant_storage/          # Local Qdrant storage (optional)
 ├── .env.example
-├── Dockerfile
-├── Dockerfile.streamlit
+├── Dockerfile               # Canonical all-in-one image (HF/local)
+├── Dockerfile.api           # Optional backend-only image
+├── start.sh                 # Entrypoint for all-in-one container
+├── README.hf.md             # Space card template used by CI sync
 ├── requirements.txt
 └── readme.md
 ```

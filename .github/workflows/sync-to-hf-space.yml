@@ -61,14 +61,11 @@ jobs:
           # Export a curated subset from the current commit.
           git archive --format=tar HEAD \
             app frontend requirements.txt \
-            huggingface/README.md huggingface/Dockerfile huggingface/start.sh \
+            README.hf.md Dockerfile start.sh \
             | tar -x -C "${TMP_REPO}"
 
-          # Hugging Face Spaces expects these files at the repo root.
-          mv "${TMP_REPO}/huggingface/README.md" "${TMP_REPO}/README.md"
-          mv "${TMP_REPO}/huggingface/Dockerfile" "${TMP_REPO}/Dockerfile"
-          mv "${TMP_REPO}/huggingface/start.sh" "${TMP_REPO}/start.sh"
-          rm -rf "${TMP_REPO}/huggingface"
+          # Hugging Face Spaces expects the card as README.md at repo root.
+          mv "${TMP_REPO}/README.hf.md" "${TMP_REPO}/README.md"
 
           cd "${TMP_REPO}"
           git init

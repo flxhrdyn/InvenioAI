@@ -17,12 +17,16 @@ This Space runs DocuMind as a single Docker container:
 
 ## Required secrets / variables (Space Settings)
 
-- `GEMINI_API_KEY` (Secret)
+Required:
 
-Recommended for Spaces:
+- Secret: `GEMINI_API_KEY`
 
-- `QDRANT_URL` / `QDRANT_API_KEY` (Qdrant server/cloud; preferred over local storage on Spaces)
-- `DOCUMIND_DELETE_UPLOADED_PDFS=1` (if you want to delete PDFs after indexing)
+Recommended:
+
+- Secret: `QDRANT_API_KEY` (when using Qdrant Cloud)
+- Variable: `QDRANT_URL` (when using Qdrant Cloud)
+- Variable: `DOCUMIND_DELETE_UPLOADED_PDFS=1`
+- Variable: `QDRANT_PREFER_GRPC=0`
 
 ## Notes
 
