@@ -13,7 +13,10 @@ from functools import lru_cache
 from . import config as _config  # noqa: F401
 from .config import EMBEDDING_MODEL
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:  # pragma: no cover - compatibility fallback
+    from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 @lru_cache(maxsize=1)

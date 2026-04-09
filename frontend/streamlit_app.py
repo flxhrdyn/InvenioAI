@@ -884,7 +884,7 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
-    uploaded_file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"], label_visibility="collapsed")
     if uploaded_file:
         upload_status_slot = st.empty()
         if st.button("⚡ Index Document", type="primary", use_container_width=True):

@@ -17,7 +17,7 @@
 
 [![CI](https://github.com/flxhrdyn/Documind/actions/workflows/ci.yml/badge.svg)](https://github.com/flxhrdyn/Documind/actions/workflows/ci.yml)
 [![CD](https://github.com/flxhrdyn/Documind/actions/workflows/sync-to-hf-space.yml/badge.svg)](https://github.com/flxhrdyn/Documind/actions/workflows/sync-to-hf-space.yml)
-![Hugging%20Face%20Spaces](https://img.shields.io/badge/Hugging%20Face-Spaces-FFD21E?logo=huggingface)
+![HuggingFace%20Spaces](https://img.shields.io/badge/Hugging%20Face-Spaces-FFD21E?logo=huggingface)
 ![GitHub%20Actions](https://img.shields.io/badge/GitHub%20Actions-Automation-2088FF?logo=githubactions)
 
 **DocuMind** is an MVP-ready document question-answering system built with **FastAPI** (backend) and **Streamlit** (frontend). It runs a **RAG pipeline** (query rewriting → retrieval → reranking → answer generation) backed by **Qdrant**.
