@@ -19,4 +19,6 @@ trap cleanup EXIT
 exec streamlit run frontend/streamlit_app.py \
   --server.address=0.0.0.0 \
   --server.port="${PORT}" \
-  --server.headless=true
+  --server.headless=true \
+  --server.enableCORS=false \
+  --server.enableXsrfProtection=false
