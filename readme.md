@@ -19,7 +19,7 @@ In the era of information density, extracting precise answers from large PDF col
 
 It transforms static PDF documents into a searchable, intelligent knowledge base, allowing users to ask complex questions and receive answers grounded in retrieved context with verifiable source citations.
 
-## 🔗 Live Demo
+## Live Demo
 
 - **Hugging Face Space**: [https://felixhrdyn-invenioai.hf.space](https://felixhrdyn-invenioai.hf.space)
 
@@ -37,7 +37,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 ### Backend
 - **Framework**: FastAPI
 - **RAG Engine**: LangChain
-- **Models**: Google Gemini 1.5 Flash, all-MiniLM-L6-v2 (Local Embedding)
+- **Models**: Google Gemini 3.1 Flash Lite Preview, all-MiniLM-L6-v2 (Local Embedding)
 - **Reranker**: Cross-Encoder (MS-MARCO MiniLM)
 - **Search**: BM25 (Lexical) + Qdrant (Dense)
 
