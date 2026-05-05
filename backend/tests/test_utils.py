@@ -15,7 +15,7 @@ class MockDocument:
 def test_format_docs_single_document():
     """Format a single document and keep the source list in sync."""
     doc = MockDocument("This is test content", {"source": "test.pdf"})
-    context, sources = format_docs([doc])
+    context, sources, _ = format_docs([doc])
     
     assert context == "This is test content"
     assert sources == "- test.pdf"
@@ -29,7 +29,7 @@ def test_format_docs_multiple_documents():
         MockDocument("Third document", {"source": "doc3.pdf"})
     ]
     
-    context, sources = format_docs(docs)
+    context, sources, _ = format_docs(docs)
     
     # Check context contains all documents separated by double newline
     assert "First document" in context
@@ -45,7 +45,7 @@ def test_format_docs_multiple_documents():
 
 def test_format_docs_empty_list():
     """Empty input returns empty strings."""
-    context, sources = format_docs([])
+    context, sources, _ = format_docs([])
     
     assert context == ""
     assert sources == ""
@@ -54,7 +54,7 @@ def test_format_docs_empty_list():
 def test_format_docs_missing_source():
     """Missing metadata falls back to `unknown`."""
     doc = MockDocument("Content without source", {})
-    context, sources = format_docs([doc])
+    context, sources, _ = format_docs([doc])
     
     assert context == "Content without source"
     assert sources == "- unknown"
@@ -63,7 +63,7 @@ def test_format_docs_missing_source():
 def test_format_docs_with_special_characters():
     """Newlines/tabs are preserved in the joined context."""
     doc = MockDocument("Content with\nnewlines\tand\ttabs", {"source": "file with spaces.pdf"})
-    context, sources = format_docs([doc])
+    context, sources, _ = format_docs([doc])
     
     assert "Content with\nnewlines\tand\ttabs" in context
     assert "- file with spaces.pdf" in sources
@@ -76,7 +76,7 @@ def test_format_docs_preserves_order():
         for i in range(5)
     ]
     
-    context, sources = format_docs(docs)
+    context, sources, _ = format_docs(docs)
     
     # Check order in context
     for i in range(5):
@@ -94,7 +94,7 @@ class TestFormatDocsEdgeCases:
         """Very long content is returned unchanged."""
         long_content = "A" * 10000
         doc = MockDocument(long_content, {"source": "long.pdf"})
-        context, sources = format_docs([doc])
+        context, sources, _ = format_docs([doc])
         
         assert len(context) == 10000
         assert context == long_content
@@ -102,7 +102,7 @@ class TestFormatDocsEdgeCases:
     def test_unicode_content(self):
         """Unicode text is handled without raising."""
         doc = MockDocument("Hello 世界 🌍", {"source": "unicode.pdf"})
-        context, sources = format_docs([doc])
+        context, sources, _ = format_docs([doc])
         
         assert "Hello 世界 🌍" in context
     
@@ -114,7 +114,7 @@ class TestFormatDocsEdgeCases:
             "author": "Test Author",
             "extra_field": "value"
         })
-        context, sources = format_docs([doc])
+        context, sources, _ = format_docs([doc])
         
         assert context == "Content"
         assert sources == "- test.pdf"

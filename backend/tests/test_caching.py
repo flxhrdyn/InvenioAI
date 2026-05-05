@@ -33,7 +33,7 @@ def test_rag_pipeline_saves_to_cache_on_miss(mock_cache):
     
     from langchain_core.documents import Document
     
-    with patch("app.rag_pipeline._run_rag_pipeline_once") as mock_run:
+    with patch("app.rag_pipeline._run_rag_pipeline_with_query") as mock_run:
         real_result = {"answer": "Real answer", "sources": []}
         mock_run.return_value = real_result
         
@@ -45,8 +45,8 @@ def test_rag_pipeline_saves_to_cache_on_miss(mock_cache):
         
         # Assert
         assert result == real_result
-        mock_cache.get.assert_called_once()
-        mock_cache.set.assert_called_once()
+        assert mock_cache.get.call_count == 2
+        assert mock_cache.set.call_count == 2
 
 @pytest.mark.asyncio
 async def test_rag_pipeline_stream_async_uses_cache(mock_cache):

@@ -183,13 +183,6 @@ def _render_assistant_message(reply: str) -> None:
 
     placeholder.markdown(reply)
 
-st.set_page_config(
-    page_title="InvenioAI",
-    page_icon="🧠",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 # Active page tracking is now handled by Streamlit's multi-page system
 
 
@@ -809,122 +802,68 @@ def wait_for_upload_job(job_id: str, *, status_slot=None, filename: str = "") ->
         time.sleep(UPLOAD_JOB_POLL_INTERVAL_SECONDS)
 
 
-def create_query_job(question: str, history: list[str]) -> tuple[str | None, str | None]:
-    try:
-        resp = requests.post(
-            f"{API_BASE_URL}/query/jobs",
-            json={"question": question, "history": history},
-            timeout=30,
-        )
-    except requests.exceptions.ConnectionError:
-        return None, f"❌ **Connection Error:** Could not connect to the backend at {API_BASE_URL}."
-    except requests.exceptions.Timeout:
-        return None, "⏱️ **Timeout:** The request took too long. Please try again."
-
-    if resp.status_code != 200:
-        return None, format_error_message(resp)
-
-    try:
-        payload = resp.json()
-        return payload.get("job_id"), None
-    except Exception:
-        return None, f"❌ **Error {resp.status_code}:** {resp.text}"
-
-
-def fetch_query_job(job_id: str) -> tuple[dict | None, str | None]:
-    try:
-        resp = requests.get(f"{API_BASE_URL}/query/jobs/{job_id}", timeout=15)
-    except requests.exceptions.ConnectionError:
-        return None, f"❌ **Connection Error:** Could not connect to the backend at {API_BASE_URL}."
-    except requests.exceptions.Timeout:
-        return None, "⏱️ **Timeout:** The request took too long. Please try again."
-
-    if resp.status_code != 200:
-        return None, format_error_message(resp)
-
-    try:
-        return resp.json(), None
-    except Exception:
-        return None, f"❌ **Error {resp.status_code}:** {resp.text}"
-
-
-def build_reply_from_job_result(job: dict) -> tuple[str, list]:
-    result = (job or {}).get("result") or {}
-    answer = result.get("answer", "❌ **Error:** Empty response.")
-    sources = result.get("sources", [])
-    return answer, sources
-
-
-def maybe_resume_pending_job():
-    job_id = st.session_state.get("pending_job_id")
-    prompt = st.session_state.get("pending_job_prompt")
-    if not job_id or not prompt:
-        return
-
-    # If user is not on the chat page, don't update UI.
-    # Keep the pending job so it can be resumed later.
-    if not _is_chat_active():
-        return
-
-    with st.spinner("Searching for an answer..."):
-        started = time.monotonic()
-        while True:
-            if not _is_chat_active():
-                # User navigated away; stop sending UI updates.
-                return
-
-            job, err = fetch_query_job(job_id)
-            if err:
-                reply = err
-                break
-
-            status = (job or {}).get("status")
-            if status in {"pending", "running"}:
-                if time.monotonic() - started > 60:
-                    # Keep job id so user can come back later without losing progress
-                    return
-                time.sleep(0.4) # Faster polling for better responsiveness
-                continue
-
-            if status == "succeeded":
-                answer, sources = build_reply_from_job_result(job)
-                
-                # Render the typing effect for the new answer
-                with st.chat_message("assistant"):
-                    _render_assistant_message(answer)
-                
-                # Only then commit to history
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": answer,
-                    "sources": sources
-                })
-                save_persistent_history(st.session_state.messages)
-                st.session_state.pop("pending_job_id", None)
-                st.session_state.pop("pending_job_prompt", None)
-                st.rerun()
-
-            if status == "failed":
-                error_msg = (job or {}).get("error") or "Unknown error"
-                reply = f"❌ **Error:** {error_msg}"
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.session_state.pop("pending_job_id", None)
-                st.session_state.pop("pending_job_prompt", None)
-                st.rerun()
-
-            reply = f"❌ **Error:** Unknown job status: {status}"
-            break
-
-    st.session_state.pop("pending_job_id", None)
-    st.session_state.pop("pending_job_prompt", None)
-
-    if not _is_chat_active():
-        # User navigated away right after completion.
-        return
-
+def run_streaming_query(prompt: str, history: list[str]):
+    """Consume the SSE stream from the backend and update the UI in real-time."""
+    
     with st.chat_message("assistant"):
-        _render_assistant_message(reply)
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+        status_placeholder = st.empty()
+        answer_placeholder = st.empty()
+        full_answer = ""
+        sources = []
+        
+        try:
+            # Use stream=True to handle SSE
+            response = requests.post(
+                f"{API_BASE_URL}/query/stream",
+                json={"question": prompt, "history": history},
+                stream=True,
+                timeout=(5, 60) # 5s to connect, 60s for the whole stream
+            )
+            response.raise_for_status()
+            
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                
+                line_str = line.decode("utf-8")
+                if not line_str.startswith("data: "):
+                    continue
+                
+                try:
+                    data = json.loads(line_str[6:])
+                    step = data.get("step")
+                    
+                    if step == "rewriting":
+                        status_placeholder.markdown("🔍 *Rewriting query for context...*")
+                    elif step == "retrieving":
+                        status_placeholder.markdown("🛰️ *Searching document library...*")
+                    elif step == "reranking":
+                        status_placeholder.markdown("🎯 *Ranking relevant chunks...*")
+                    elif step == "generating":
+                        status_placeholder.markdown("🧠 *Synthesizing answer...*")
+                    elif step == "token":
+                        content = data.get("content", "")
+                        full_answer += content
+                        # Remove status once we start getting tokens
+                        status_placeholder.empty()
+                        answer_placeholder.markdown(full_answer + " ▌")
+                    elif step == "done":
+                        full_answer = data.get("answer", full_answer)
+                        sources = data.get("sources", [])
+                        answer_placeholder.markdown(full_answer)
+                        status_placeholder.empty()
+                    elif step == "error":
+                        error_msg = data.get("message", "Unknown backend error")
+                        st.error(f"❌ **Pipeline Error:** {error_msg}")
+                        return None, []
+                except json.JSONDecodeError:
+                    continue
+            
+            return full_answer, sources
+
+        except Exception as e:
+            st.error(f"❌ **Connection Error:** {e}")
+            return None, []
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -1127,8 +1066,77 @@ if _is_chat_active():
                 </style>
                 ''', unsafe_allow_html=True)
 
-# If user navigated away mid-request, resume polling and render the result.
-maybe_resume_pending_job()
+
+# Input
+if prompt := st.chat_input("Ask something about your documents..."):
+    if not get_indexed_files():
+        with st.chat_message("assistant"):
+            st.warning("⚠️ No documents indexed yet. Please upload a PDF in the sidebar first.")
+    else:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        save_persistent_history(st.session_state.messages)
+def run_streaming_query(prompt: str, history: list[str]):
+    """Consume the SSE stream from the backend and update the UI in real-time."""
+    
+    with st.chat_message("assistant"):
+        status_placeholder = st.empty()
+        answer_placeholder = st.empty()
+        full_answer = ""
+        sources = []
+        
+        try:
+            # Use stream=True to handle SSE
+            response = requests.post(
+                f"{API_BASE_URL}/query/stream",
+                json={"question": prompt, "history": history},
+                stream=True,
+                timeout=(5, 60) # 5s to connect, 60s for the whole stream
+            )
+            response.raise_for_status()
+            
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                
+                line_str = line.decode("utf-8")
+                if not line_str.startswith("data: "):
+                    continue
+                
+                try:
+                    data = json.loads(line_str[6:])
+                    step = data.get("step")
+                    
+                    if step == "rewriting":
+                        status_placeholder.markdown("🔍 *Rewriting query for context...*")
+                    elif step == "retrieving":
+                        status_placeholder.markdown("🛰️ *Searching document library...*")
+                    elif step == "reranking":
+                        status_placeholder.markdown("🎯 *Ranking relevant chunks...*")
+                    elif step == "generating":
+                        status_placeholder.markdown("🧠 *Synthesizing answer...*")
+                    elif step == "token":
+                        content = data.get("content", "")
+                        full_answer += content
+                        # Remove status once we start getting tokens
+                        status_placeholder.empty()
+                        answer_placeholder.markdown(full_answer + " ▌")
+                    elif step == "done":
+                        full_answer = data.get("answer", full_answer)
+                        sources = data.get("sources", [])
+                        answer_placeholder.markdown(full_answer)
+                        status_placeholder.empty()
+                    elif step == "error":
+                        error_msg = data.get("message", "Unknown backend error")
+                        st.error(f"❌ **Pipeline Error:** {error_msg}")
+                        return None, []
+                except json.JSONDecodeError:
+                    continue
+            
+            return full_answer, sources
+
+        except Exception as e:
+            st.error(f"❌ **Connection Error:** {e}")
+            return None, []
 
 # Input
 if prompt := st.chat_input("Ask something about your documents..."):
@@ -1141,22 +1149,20 @@ if prompt := st.chat_input("Ask something about your documents..."):
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Create a background job so the backend keeps working even if user navigates away.
         formatted_history = [
             f"{m['role']}: {m['content']}"
             for m in st.session_state.messages[:-1]
         ]
 
-        job_id, err = create_query_job(prompt, formatted_history)
-        if err or not job_id:
-            reply = err or "❌ **Error:** Failed to create job."
-            with st.chat_message("assistant"):
-                _render_assistant_message(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
+        answer, sources = run_streaming_query(prompt, formatted_history)
+        
+        if answer:
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": answer,
+                "sources": sources
+            })
             save_persistent_history(st.session_state.messages)
-        else:
-            st.session_state["pending_job_id"] = job_id
-            st.session_state["pending_job_prompt"] = prompt
-            maybe_resume_pending_job()
+            st.rerun()
 
 
