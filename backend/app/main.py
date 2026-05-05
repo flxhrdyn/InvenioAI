@@ -24,6 +24,17 @@ from .index_api import router as index_router
 from .config import PRELOAD_EMBEDDINGS_ON_STARTUP
 from .rag_pipeline import rag_pipeline
 from .qdrant_conn import close_qdrant_client
+from .metrics import (
+    load_metrics,
+    get_avg_response_time,
+    get_avg_retrieval_time,
+    get_avg_generation_time,
+    get_avg_docs_retrieved,
+    get_avg_chunks_processed,
+    get_retrieval_efficiency,
+    get_generation_efficiency,
+    compute_ir_metrics
+)
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +184,29 @@ def get_query_job(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+@app.get("/metrics", tags=["analytics"])
+def get_metrics() -> Dict[str, Any]:
+    """Return aggregate RAG performance and quality metrics."""
+    metrics = load_metrics()
+    
+    # Compute aggregate IR metrics
+    ir_metrics = compute_ir_metrics(metrics.get("query_history", []))
+    
+    return {
+        "total_queries": metrics.get("total_queries", 0),
+        "total_documents_indexed": metrics.get("total_documents_indexed", 0),
+        "avg_response_time": get_avg_response_time(),
+        "avg_retrieval_time": get_avg_retrieval_time(),
+        "avg_generation_time": get_avg_generation_time(),
+        "avg_docs_retrieved": get_avg_docs_retrieved(),
+        "avg_chunks_processed": get_avg_chunks_processed(),
+        "retrieval_efficiency_pct": get_retrieval_efficiency(),
+        "generation_efficiency_pct": get_generation_efficiency(),
+        "ir_quality": ir_metrics,
+        "query_history": metrics.get("query_history", [])[-10:]  # Last 10 for quick view
+    }
 
 
 @app.get("/")

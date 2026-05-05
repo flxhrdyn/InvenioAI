@@ -33,6 +33,7 @@ def format_docs(docs: Iterable[Any]) -> Tuple[str, str, List[Dict[str, Any]]]:
         sources_json.append({
             "file": filename,
             "text": doc.page_content,
+            "page": metadata.get("page_number") or metadata.get("page", 0),
             "score": metadata.get("score", 0.0)
         })
 

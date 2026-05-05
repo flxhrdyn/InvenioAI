@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 import time
 from functools import lru_cache
+import hashlib
+from .cache_manager import CacheManager
 from typing import Any
 
 from langchain_groq import ChatGroq
@@ -68,6 +70,20 @@ def _get_llm() -> ChatGroq:
         temperature=0,
     )
 
+_cache_manager: CacheManager | None = None
+
+def get_cache_manager() -> CacheManager:
+    global _cache_manager
+    if _cache_manager is None:
+        _cache_manager = CacheManager()
+    return _cache_manager
+
+def _get_cache_key(question: str, history: Any) -> str:
+    """Generate a unique hash key for a query and its history."""
+    hist_str = str(history) if history else ""
+    raw = f"{question.strip().lower()}:{hist_str}"
+    return f"rag_cache:{hashlib.md5(raw.encode()).hexdigest()}"
+
 
 def format_history(history: Any) -> str:
     """Format chat history into a prompt-friendly string."""
@@ -82,6 +98,7 @@ def format_history(history: Any) -> str:
 
 def rewrite_query(question: str, history: Any) -> str:
     """Rewrite a question into a standalone query."""
+    # We can cache the rewrite too if we want, but it's usually fast enough (1s)
     prompt = QUERY_REWRITE_PROMPT.format(
         history=format_history(history),
         question=question,
@@ -182,15 +199,41 @@ async def rewrite_query_async(query: str, history: list[str]) -> str:
         return query
 
 def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
-    """Run the RAG pipeline.
+    """Run the RAG pipeline with two-layer caching.
 
     Returns a dict containing the answer, a sources string, and timing metrics.
     """
+    cache = get_cache_manager()
+    quick_key = _get_cache_key(question, history)
+    
+    # Layer 1: Quick Cache (Exact request match)
+    cached = cache.get(quick_key)
+    if cached:
+        logger.info(f"RAG Quick Cache Hit: {question[:50]}...")
+        return cached
 
     max_attempts = 2
     for attempt in range(max_attempts):
         try:
-            return _run_rag_pipeline_once(question, history)
+            # Step 1: Rewrite Query
+            standalone_query = rewrite_query(question, history)
+            deep_key = f"rag_deep_cache:{hashlib.md5(standalone_query.strip().lower().encode()).hexdigest()}"
+            
+            # Layer 2: Deep Cache (Standalone query match)
+            cached_deep = cache.get(deep_key)
+            if cached_deep:
+                logger.info(f"RAG Deep Cache Hit: {standalone_query[:50]}...")
+                # Save to Quick Cache for next time
+                cache.set(quick_key, cached_deep, ttl=3600)
+                return cached_deep
+
+            # Full Pipeline
+            result = _run_rag_pipeline_with_query(standalone_query, question, history)
+            
+            # Save to both caches
+            cache.set(deep_key, result, ttl=3600)
+            cache.set(quick_key, result, ttl=3600)
+            return result
         except Exception as exc:
             if attempt < (max_attempts - 1) and is_qdrant_client_closed_error(exc):
                 logger.warning("Qdrant client was closed during query; recreating and retrying once")
@@ -200,6 +243,57 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
 
     raise RuntimeError("Unexpected RAG retry state")
 
+def _run_rag_pipeline_with_query(standalone_query: str, original_question: str, history: Any) -> dict[str, Any]:
+    """Internal helper to run the core RAG steps once we have a standalone query."""
+    total_start = time.monotonic()
+    retriever, vectorstore, client = build_retriever()
+
+    retrieval_start = time.monotonic()
+    retrieved_docs, retrieval_meta = retrieve_documents(
+        standalone_query,
+        dense_retriever=retriever,
+        client=client,
+    )
+
+    reranked_docs = rerank(standalone_query, retrieved_docs)
+    retrieval_time = time.monotonic() - retrieval_start
+
+    # Per-document similarity scores for the dashboard.
+    try:
+        scored = vectorstore.similarity_search_with_relevance_scores(
+            standalone_query, k=RETRIEVAL_K
+        )
+        retrieval_scores = [round(float(score), 4) for _, score in scored]
+    except Exception:
+        logger.debug("Failed to fetch relevance scores", exc_info=True)
+        retrieval_scores = []
+
+    context, sources_str, sources_json = format_docs(reranked_docs)
+    prompt = RAG_PROMPT.format(context=context, question=original_question, sources=sources_str)
+
+    generation_start = time.monotonic()
+    answer_msg = _get_llm().invoke(prompt)
+    generation_time = time.monotonic() - generation_start
+
+    total_time = time.monotonic() - total_start
+
+    return {
+        "answer": answer_msg.content,
+        "sources": sources_json,
+        "metrics": {
+            "total_time": round(total_time, 2),
+            "retrieval_time": round(retrieval_time, 2),
+            "generation_time": round(generation_time, 2),
+            "docs_retrieved": len(retrieved_docs),
+            "chunks_processed": len(reranked_docs),
+            "retrieval_scores": retrieval_scores,
+            "retrieval_mode": retrieval_meta.get("mode", "dense"),
+            "dense_candidates": retrieval_meta.get("dense_docs", len(retrieved_docs)),
+            "lexical_candidates": retrieval_meta.get("lexical_docs", 0),
+            "fused_candidates": retrieval_meta.get("fused_docs", len(retrieved_docs)),
+        },
+    }
+
 async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     from .retriever import build_retriever, retrieve_documents_async
     from .qdrant_conn import is_qdrant_client_closed_error, close_qdrant_client
@@ -208,11 +302,42 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     import time
 
     total_start = time.monotonic()
+    cache = get_cache_manager()
+    quick_key = _get_cache_key(query, chat_history)
+
+    # Layer 1: Quick Cache
+    cached = cache.get(quick_key)
+    if cached:
+        logger.info(f"RAG Stream Quick Cache Hit: {query[:50]}...")
+        yield json.dumps({"step": "cached", "answer": cached["answer"]}) + "\n"
+        yield json.dumps({
+            "step": "done",
+            "answer": cached["answer"],
+            "sources": cached["sources"],
+            "metrics": cached.get("metrics", {})
+        }) + "\n"
+        return
 
     try:
         # Step 1: Rewrite Query asynchronously
         yield json.dumps({"step": "rewriting"}) + "\n"
         standalone_query = await rewrite_query_async(query, chat_history)
+        
+        # Layer 2: Deep Cache
+        deep_key = f"rag_deep_cache:{hashlib.md5(standalone_query.strip().lower().encode()).hexdigest()}"
+        cached_deep = cache.get(deep_key)
+        if cached_deep:
+            logger.info(f"RAG Stream Deep Cache Hit: {standalone_query[:50]}...")
+            # Populate Quick Cache
+            cache.set(quick_key, cached_deep, ttl=3600)
+            yield json.dumps({"step": "cached", "answer": cached_deep["answer"]}) + "\n"
+            yield json.dumps({
+                "step": "done",
+                "answer": cached_deep["answer"],
+                "sources": cached_deep["sources"],
+                "metrics": cached_deep.get("metrics", {})
+            }) + "\n"
+            return
 
         # Step 2: Retrieval
         yield json.dumps({"step": "retrieving", "query": standalone_query}) + "\n"
@@ -256,13 +381,12 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         # Step 4: LLM Answer Generation (Streaming)
         yield json.dumps({"step": "generating"}) + "\n"
         
-        context_text = "\n\n---\n\n".join(
-            [f"[Sumber: {d.metadata.get('source_file', 'unknown')}]\n{d.page_content}" for d in top_docs]
-        )
-        prompt = RAG_PROMPT.format(context=context_text, question=standalone_query, sources="")
+        # Format sources for the frontend
+        from .utils import format_docs
+        context_text, sources_str, sources_json = format_docs(top_docs)
+        prompt = RAG_PROMPT.format(context=context_text, question=standalone_query, sources=sources_str)
         
         llm = _get_llm()
-        
         generation_start = time.monotonic()
         full_answer = ""
         async for chunk in llm.astream(prompt):
@@ -274,17 +398,28 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         total_time = time.monotonic() - total_start
 
         # Final result with sources
-        yield json.dumps({
+        final_result = {
             "step": "done",
             "answer": full_answer,
-            "docs": [d.model_dump() if hasattr(d, "model_dump") else str(d) for d in top_docs],
-            "metadata": {
+            "sources": sources_json,
+            "metrics": {
                 **metadata,
                 "total_time": round(total_time, 2),
                 "retrieval_time": round(retrieval_time, 2),
                 "generation_time": round(generation_time, 2),
             }
-        }) + "\n"
+        }
+        
+        # Cache the result for future identical queries (Both layers)
+        cache_data = {
+            "answer": full_answer,
+            "sources": sources_json,
+            "metrics": final_result["metrics"]
+        }
+        cache.set(deep_key, cache_data, ttl=3600)
+        cache.set(quick_key, cache_data, ttl=3600)
+        
+        yield json.dumps(final_result) + "\n"
 
         # Log metrics to disk
         from .metrics import log_query

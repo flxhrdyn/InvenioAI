@@ -17,8 +17,8 @@ def test_delete_document_success(mock_get_qdrant):
     
     filename = "test.pdf"
     
-    # Execute
-    response = client.delete(f"/documents/{filename}")
+    # Execute - should use query param as per implementation
+    response = client.delete("/documents/delete", params={"filename": filename})
     
     # Assert
     assert response.status_code == 200
@@ -35,7 +35,8 @@ def test_delete_document_success(mock_get_qdrant):
     from qdrant_client.http import models
     assert isinstance(points_selector, models.FilterSelector)
     
-    # We expect a filter that matches metadata.source_file
+    # We expect a filter that matches metadata.source_file or metadata.source
     filter_obj = points_selector.filter
-    assert filter_obj.must[0].key == "metadata.source_file"
-    assert filter_obj.must[0].match.value == filename
+    assert filter_obj.should[0].key == "metadata.source_file"
+    assert filter_obj.should[0].match.value == filename
+    assert filter_obj.should[1].key == "metadata.source"

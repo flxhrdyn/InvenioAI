@@ -18,10 +18,13 @@ class CacheManager:
         if self.cache_type == "redis":
             try:
                 self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+                # Force connection check immediately
+                self.redis_client.ping()
                 logger.info(f"Initialized Redis cache at {redis_url}")
             except Exception as e:
                 logger.error(f"Failed to initialize Redis cache: {e}. Falling back to diskcache.")
                 self.cache_type = "diskcache"
+                self.redis_client = None
                 
         if self.cache_type == "diskcache":
             cache_dir = BASE_DIR / ".cache" / "invenio"

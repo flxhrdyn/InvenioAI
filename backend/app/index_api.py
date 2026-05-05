@@ -220,9 +220,10 @@ def list_documents():
             meta = payload.get("metadata")
             source = None
             if isinstance(meta, dict):
-                source = meta.get("source")
+                # Prioritize our custom source_file basename
+                source = meta.get("source_file") or meta.get("source")
             if not source:
-                source = payload.get("source")
+                source = payload.get("source_file") or payload.get("source")
 
             if isinstance(source, str) and source:
                 documents.add(os.path.basename(source))
@@ -254,14 +255,20 @@ def delete_document(filename: str):
             pass
 
         # Qdrant delete call using a filter on metadata.source_file
+        # Qdrant delete call using a filter. 
+        # We check both source_file and source to be safe with older entries.
         client.delete(
             collection_name=QDRANT_COLLECTION,
             points_selector=models.FilterSelector(
                 filter=models.Filter(
-                    must=[
+                    should=[
                         models.FieldCondition(
                             key="metadata.source_file",
                             match=models.MatchValue(value=safe_name),
+                        ),
+                        models.FieldCondition(
+                            key="metadata.source",
+                            match=models.MatchText(text=safe_name),
                         ),
                     ]
                 )

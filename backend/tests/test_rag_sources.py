@@ -17,10 +17,10 @@ def test_query_returns_source_nodes_with_metadata(mock_rerank, mock_retrieve, mo
     mock_rewrite.return_value = "standalone query"
     mock_llm.return_value.invoke.return_value.content = "Ini jawaban AI."
     
-    # Mock documents
+    # Mock documents with page info
     docs = [
-        Document(page_content="Snippet teks 1", metadata={"source": "file_a.pdf", "score": 0.9}),
-        Document(page_content="Snippet teks 2", metadata={"source": "file_b.pdf", "score": 0.8})
+        Document(page_content="Snippet teks 1", metadata={"source": "file_a.pdf", "score": 0.9, "page_number": 5}),
+        Document(page_content="Snippet teks 2", metadata={"source": "file_b.pdf", "score": 0.8, "page_number": 12})
     ]
     mock_retrieve.return_value = (docs, {"mode": "dense"})
     mock_rerank.return_value = docs
@@ -39,4 +39,5 @@ def test_query_returns_source_nodes_with_metadata(mock_rerank, mock_retrieve, mo
     s1 = data["sources"][0]
     assert s1["file"] == "file_a.pdf"
     assert s1["text"] == "Snippet teks 1"
+    assert s1["page"] == 5
     assert "score" in s1

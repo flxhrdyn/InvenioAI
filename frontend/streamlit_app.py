@@ -113,6 +113,17 @@ def _record_upload_duration(seconds: float) -> None:
     st.session_state[UPLOAD_DURATION_HISTORY_KEY] = history[-MAX_UPLOAD_DURATION_SAMPLES:]
 
 
+def fetch_metrics() -> tuple[dict | None, str | None]:
+    """Fetch aggregate metrics from backend."""
+    try:
+        resp = requests.get(f"{API_BASE_URL}/metrics", timeout=10)
+        if resp.status_code == 200:
+            return resp.json(), None
+        return None, f"❌ **Error {resp.status_code}:** Failed to load metrics."
+    except Exception as e:
+        return None, f"❌ **Connection Error:** {e}"
+
+
 def _estimate_upload_eta_seconds(elapsed_seconds: float) -> int | None:
     history = _get_upload_duration_history()
     if not history:
@@ -1013,39 +1024,59 @@ with st.sidebar:
             st.session_state.messages = []
             st.rerun()
 
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
+    # Navigation
+    st.markdown('<div class="section-label">Navigation</div>', unsafe_allow_html=True)
+    page = st.radio(
+        "Select Page",
+        ["Chat", "Dashboard"],
+        index=0 if st.session_state.get(ACTIVE_PAGE_KEY, "chat") == "chat" else 1,
+        label_visibility="collapsed"
+    )
+    if page == "Chat":
+        _set_active_page("chat")
+    else:
+        _set_active_page("dashboard")
+
 
 # ── Chat ──────────────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Welcome screen when no messages
-if not st.session_state.messages:
-    st.markdown("""
-    <div class="welcome-container">
-        <div class="welcome-icon">🧠</div>
-        <div class="welcome-title">InvenioAI</div>
-        <div class="welcome-subtitle">
-            Ask anything about the documents you have uploaded.
-            The AI will find answers directly from your document sources.
+if _is_chat_active():
+    if not st.session_state.messages:
+        st.markdown("""
+        <div class="welcome-container">
+            <div class="welcome-icon">🧠</div>
+            <div class="welcome-title">InvenioAI</div>
+            <div class="welcome-subtitle">
+                Ask anything about the documents you have uploaded.
+                The AI will find answers directly from your document sources.
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-# Render history
-for i, message in enumerate(st.session_state.messages):
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Render history
+    for i, message in enumerate(st.session_state.messages):
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
         
         # Interactive Source Pills for assistant messages
         sources = message.get("sources")
         if sources and isinstance(sources, list):
-            st.markdown('<div style="margin-top: 12px; margin-bottom: 8px;"></div>', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top: 16px; margin-bottom: 12px;"></div>', unsafe_allow_html=True)
             
             # Group sources by filename to avoid overwhelming redundancy
             from collections import defaultdict
             grouped = defaultdict(list)
             for s in sources:
-                grouped[s['file']].append(s.get('text', ''))
+                # Store snippet with its page info
+                grouped[s['file']].append({
+                    "text": s.get('text', ''),
+                    "page": s.get('page')
+                })
             
             # Create a clean single expander for all sources using native HTML <details> for jitter-free UI
             source_items = list(grouped.items())
@@ -1053,14 +1084,22 @@ for i, message in enumerate(st.session_state.messages):
                 src_html = ""
                 for filename, snippets in source_items:
                     src_html += f'<div style="font-size: 13px; font-weight: 600; color: {COLORS["accent"]}; margin-bottom: 8px; margin-top: 12px;">📄 {filename}</div>'
-                    for text in snippets:
+                    for item in snippets:
+                        text = item["text"]
+                        page = item["page"]
+                        page_label = f'<span style="font-size: 10px; background: {COLORS["bg_secondary"]}; padding: 2px 6px; border-radius: 4px; margin-bottom: 4px; display: inline-block;">Page {page}</span>' if page else ""
+                        
                         # Truncate very long snippets to keep UI snappy
                         safe_text = (text[:800] + "...") if len(text) > 850 else text
-                        src_html += f'<div style="font-size: 12px; line-height: 1.5; color: #bbb; padding-left: 12px; border-left: 2px solid {COLORS["border"]}; margin-bottom: 8px;">{safe_text}</div>'
+                        src_html += f'''
+                        <div style="margin-bottom: 12px; padding-left: 12px; border-left: 2px solid {COLORS["border"]};">
+                            {page_label}
+                            <div style="font-size: 12px; line-height: 1.5; color: #bbb;">{safe_text}</div>
+                        </div>'''
                 
                 # Using native HTML <details> avoids Streamlit's layout engine jumping during interaction
                 st.markdown(f'''
-                <details class="source-details" style="border: 1px solid {COLORS["border"]}; border-radius: 8px; background: {COLORS["bg_card"]}; transition: all 0.2s ease; width: 100%;">
+                <details class="source-details" style="border: 1px solid {COLORS["border"]}; border-radius: 8px; background: {COLORS["bg_card"]}; transition: all 0.2s ease; width: 100%; margin-bottom: 32px; margin-top: 8px;">
                     <summary style="padding: 10px 14px; color: {COLORS["text_secondary"]}; font-size: 13px; font-weight: 500; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 14px;">📚</span> {len(source_items)} Sources
@@ -1109,4 +1148,56 @@ if prompt := st.chat_input("Ask something about your documents..."):
             st.session_state["pending_job_id"] = job_id
             st.session_state["pending_job_prompt"] = prompt
             maybe_resume_pending_job()
+
+elif st.session_state.get(ACTIVE_PAGE_KEY) == "dashboard":
+    st.markdown('<h1 style="font-size: 28px; font-weight: 700; margin-bottom: 24px;">Analytics Dashboard</h1>', unsafe_allow_html=True)
+    
+    data, err = fetch_metrics()
+    if err:
+        st.error(err)
+    elif data:
+        # Top Row Metrics
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.markdown(f'''<div class="metric-card">
+                <div class="metric-value">{data["total_queries"]}</div>
+                <div class="metric-label">Total Queries</div>
+            </div>''', unsafe_allow_html=True)
+        with m2:
+            st.markdown(f'''<div class="metric-card">
+                <div class="metric-value">{data["avg_response_time"]}s</div>
+                <div class="metric-label">Avg. Latency</div>
+            </div>''', unsafe_allow_html=True)
+        with m3:
+            st.markdown(f'''<div class="metric-card">
+                <div class="metric-value">{data["total_documents_indexed"]}</div>
+                <div class="metric-label">Indexed Docs</div>
+            </div>''', unsafe_allow_html=True)
+        with m4:
+            ir = data.get("ir_quality", {})
+            hit_rate = f"{ir.get('hit_rate', 0)*100:.0f}%"
+            st.markdown(f'''<div class="metric-card">
+                <div class="metric-value">{hit_rate}</div>
+                <div class="metric-label">IR Hit Rate</div>
+            </div>''', unsafe_allow_html=True)
+            
+        # Charts
+        st.markdown('<div class="section-label">Performance Trends</div>', unsafe_allow_html=True)
+        history = data.get("query_history", [])
+        if history:
+            import pandas as pd
+            df = pd.DataFrame(history)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            
+            # Latency Chart
+            st.subheader("Latency History (seconds)")
+            st.line_chart(df.set_index('timestamp')[['response_time', 'retrieval_time', 'generation_time']])
+            
+            # Details Table
+            st.subheader("Recent Queries")
+            st.dataframe(df[['timestamp', 'question', 'response_time', 'docs_retrieved']].sort_values('timestamp', ascending=False), use_container_width=True)
+        else:
+            st.info("No query history available yet. Send some messages to see analytics!")
+    else:
+        st.warning("No data returned from metrics API.")
 
