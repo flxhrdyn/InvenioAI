@@ -631,16 +631,20 @@ hr {{
 """, unsafe_allow_html=True)
 
 
-@st.cache_data(ttl=5, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def _fetch_indexed_documents(api_base_url: str) -> list[str]:
-    resp = requests.get(f"{api_base_url}/documents", timeout=10)
-    if resp.status_code != 200:
+    try:
+        resp = requests.get(f"{api_base_url}/documents", timeout=5)
+        if resp.status_code != 200:
+            return []
+        payload = resp.json() or {}
+        # The backend returns a list of filenames directly based on my recent checks
+        if isinstance(payload, list):
+            return [str(d) for d in payload if d]
+        docs = payload.get("documents") or []
+        return [str(d) for d in docs if d]
+    except Exception:
         return []
-    payload = resp.json() or {}
-    docs = payload.get("documents") or []
-    if not isinstance(docs, list):
-        return []
-    return [str(d) for d in docs if d]
 
 
 def get_indexed_files() -> list[str]:
@@ -816,15 +820,11 @@ def fetch_query_job(job_id: str) -> tuple[dict | None, str | None]:
         return None, f"❌ **Error {resp.status_code}:** {resp.text}"
 
 
-def build_reply_from_job_result(prompt: str, job: dict) -> str:
+def build_reply_from_job_result(job: dict) -> tuple[str, list]:
     result = (job or {}).get("result") or {}
-    answer = result.get("answer", "")
-    sources = result.get("sources", "")
-
-    reply = answer or "❌ **Error:** Empty response."
-    if sources:
-        reply += f"\n\n---\n📚 **Sources:**\n{sources}"
-    return reply
+    answer = result.get("answer", "❌ **Error:** Empty response.")
+    sources = result.get("sources", [])
+    return answer, sources
 
 
 def maybe_resume_pending_job():
@@ -855,16 +855,33 @@ def maybe_resume_pending_job():
                 if time.monotonic() - started > 60:
                     # Keep job id so user can come back later without losing progress
                     return
-                time.sleep(0.8)
+                time.sleep(0.4) # Faster polling for better responsiveness
                 continue
 
             if status == "succeeded":
-                reply = build_reply_from_job_result(prompt, job)
-                break
+                answer, sources = build_reply_from_job_result(job)
+                
+                # Render the typing effect for the new answer
+                with st.chat_message("assistant"):
+                    _render_assistant_message(answer)
+                
+                # Only then commit to history
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": answer,
+                    "sources": sources
+                })
+                st.session_state.pop("pending_job_id", None)
+                st.session_state.pop("pending_job_prompt", None)
+                st.rerun()
 
             if status == "failed":
-                reply = f"❌ **Error:** {(job or {}).get('error', 'Unknown error')}"
-                break
+                error_msg = (job or {}).get("error") or "Unknown error"
+                reply = f"❌ **Error:** {error_msg}"
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.session_state.pop("pending_job_id", None)
+                st.session_state.pop("pending_job_prompt", None)
+                st.rerun()
 
             reply = f"❌ **Error:** Unknown job status: {status}"
             break
@@ -1015,9 +1032,53 @@ if not st.session_state.messages:
     """, unsafe_allow_html=True)
 
 # Render history
-for message in st.session_state.messages:
+for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        
+        # Interactive Source Pills for assistant messages
+        sources = message.get("sources")
+        if sources and isinstance(sources, list):
+            st.markdown('<div style="margin-top: 12px; margin-bottom: 8px;"></div>', unsafe_allow_html=True)
+            
+            # Group sources by filename to avoid overwhelming redundancy
+            from collections import defaultdict
+            grouped = defaultdict(list)
+            for s in sources:
+                grouped[s['file']].append(s.get('text', ''))
+            
+            # Create a clean single expander for all sources using native HTML <details> for jitter-free UI
+            source_items = list(grouped.items())
+            if source_items:
+                src_html = ""
+                for filename, snippets in source_items:
+                    src_html += f'<div style="font-size: 13px; font-weight: 600; color: {COLORS["accent"]}; margin-bottom: 8px; margin-top: 12px;">📄 {filename}</div>'
+                    for text in snippets:
+                        # Truncate very long snippets to keep UI snappy
+                        safe_text = (text[:800] + "...") if len(text) > 850 else text
+                        src_html += f'<div style="font-size: 12px; line-height: 1.5; color: #bbb; padding-left: 12px; border-left: 2px solid {COLORS["border"]}; margin-bottom: 8px;">{safe_text}</div>'
+                
+                # Using native HTML <details> avoids Streamlit's layout engine jumping during interaction
+                st.markdown(f'''
+                <details class="source-details" style="border: 1px solid {COLORS["border"]}; border-radius: 8px; background: {COLORS["bg_card"]}; transition: all 0.2s ease; width: 100%;">
+                    <summary style="padding: 10px 14px; color: {COLORS["text_secondary"]}; font-size: 13px; font-weight: 500; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 14px;">📚</span> {len(source_items)} Sources
+                        </div>
+                        <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s ease;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </summary>
+                    <div style="padding: 0 14px 14px; max-height: 350px; overflow-y: auto; border-top: 1px solid {COLORS["border"]};">
+                        {src_html}
+                    </div>
+                </details>
+                <style>
+                    .source-details summary::-webkit-details-marker {{ display: none; }}
+                    .source-details[open] {{ border-color: {COLORS["accent"]}; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }}
+                    .source-details[open] .chevron {{ transform: rotate(180deg); }}
+                </style>
+                ''', unsafe_allow_html=True)
 
 # If user navigated away mid-request, resume polling and render the result.
 maybe_resume_pending_job()

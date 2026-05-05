@@ -116,9 +116,8 @@ def _run_rag_pipeline_once(question: str, history: Any) -> dict[str, Any]:
             logger.debug("Failed to fetch relevance scores", exc_info=True)
             retrieval_scores = []
 
-        context, sources = format_docs(reranked_docs)
-
-        prompt = RAG_PROMPT.format(context=context, question=question, sources=sources)
+        context, sources_str, sources_json = format_docs(reranked_docs)
+        prompt = RAG_PROMPT.format(context=context, question=question, sources=sources_str)
 
         generation_start = time.monotonic()
         answer_msg = _get_llm().invoke(prompt)
@@ -128,7 +127,7 @@ def _run_rag_pipeline_once(question: str, history: Any) -> dict[str, Any]:
 
         res = {
             "answer": answer_msg.content,
-            "sources": sources,
+            "sources": sources_json,
             "metrics": {
                 "total_time": round(total_time, 2),
                 "retrieval_time": round(retrieval_time, 2),
