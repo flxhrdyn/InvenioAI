@@ -203,6 +203,7 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
 
     Returns a dict containing the answer, a sources string, and timing metrics.
     """
+    total_start = time.monotonic()
     cache = get_cache_manager()
     quick_key = _get_cache_key(question, history)
     
@@ -210,6 +211,21 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
     cached = cache.get(quick_key)
     if cached:
         logger.info(f"RAG Quick Cache Hit: {question[:50]}...")
+        # Log to metrics so it appears in dashboard
+        try:
+            from .metrics import log_query
+            log_query(
+                question=question,
+                response_time=0.01, # Minimal time for cache hit
+                answer_length=len(cached.get("answer", "")),
+                retrieval_time=0,
+                generation_time=0,
+                docs_retrieved=cached.get("metrics", {}).get("docs_retrieved", 0),
+                chunks_processed=cached.get("metrics", {}).get("chunks_processed", 0),
+                retrieval_scores=cached.get("metrics", {}).get("retrieval_scores", []),
+            )
+        except Exception:
+            logger.warning("Failed to log cached query metrics", exc_info=True)
         return cached
 
     max_attempts = 2
@@ -223,6 +239,21 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             cached_deep = cache.get(deep_key)
             if cached_deep:
                 logger.info(f"RAG Deep Cache Hit: {standalone_query[:50]}...")
+                # Log to metrics
+                try:
+                    from .metrics import log_query
+                    log_query(
+                        question=question,
+                        response_time=time.monotonic() - total_start,
+                        answer_length=len(cached_deep.get("answer", "")),
+                        retrieval_time=0,
+                        generation_time=0,
+                        docs_retrieved=cached_deep.get("metrics", {}).get("docs_retrieved", 0),
+                        chunks_processed=cached_deep.get("metrics", {}).get("chunks_processed", 0),
+                        retrieval_scores=cached_deep.get("metrics", {}).get("retrieval_scores", []),
+                    )
+                except Exception:
+                    logger.warning("Failed to log deep cached query metrics", exc_info=True)
                 # Save to Quick Cache for next time
                 cache.set(quick_key, cached_deep, ttl=3600)
                 return cached_deep
@@ -277,7 +308,7 @@ def _run_rag_pipeline_with_query(standalone_query: str, original_question: str, 
 
     total_time = time.monotonic() - total_start
 
-    return {
+    res = {
         "answer": answer_msg.content,
         "sources": sources_json,
         "metrics": {
@@ -294,6 +325,24 @@ def _run_rag_pipeline_with_query(standalone_query: str, original_question: str, 
         },
     }
 
+    # Log metrics to disk
+    try:
+        from .metrics import log_query
+        log_query(
+            question=original_question,
+            response_time=total_time,
+            answer_length=len(res["answer"]),
+            retrieval_time=retrieval_time,
+            generation_time=generation_time,
+            docs_retrieved=len(retrieved_docs),
+            chunks_processed=len(reranked_docs),
+            retrieval_scores=retrieval_scores,
+        )
+    except Exception:
+        logger.warning("Failed to log query metrics", exc_info=True)
+
+    return res
+
 async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     from .retriever import build_retriever, retrieve_documents_async
     from .qdrant_conn import is_qdrant_client_closed_error, close_qdrant_client
@@ -309,6 +358,22 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     cached = cache.get(quick_key)
     if cached:
         logger.info(f"RAG Stream Quick Cache Hit: {query[:50]}...")
+        # Log to metrics
+        try:
+            from .metrics import log_query
+            log_query(
+                question=query,
+                response_time=0.01,
+                answer_length=len(cached.get("answer", "")),
+                retrieval_time=0,
+                generation_time=0,
+                docs_retrieved=cached.get("metrics", {}).get("docs_retrieved", 0),
+                chunks_processed=cached.get("metrics", {}).get("chunks_processed", 0),
+                retrieval_scores=cached.get("metrics", {}).get("retrieval_scores", []),
+            )
+        except Exception:
+            logger.warning("Failed to log cached stream metrics", exc_info=True)
+            
         yield json.dumps({"step": "cached", "answer": cached["answer"]}) + "\n"
         yield json.dumps({
             "step": "done",
@@ -328,6 +393,21 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         cached_deep = cache.get(deep_key)
         if cached_deep:
             logger.info(f"RAG Stream Deep Cache Hit: {standalone_query[:50]}...")
+            # Log to metrics
+            try:
+                from .metrics import log_query
+                log_query(
+                    question=query,
+                    response_time=time.monotonic() - total_start,
+                    answer_length=len(cached_deep.get("answer", "")),
+                    retrieval_time=0,
+                    generation_time=0,
+                    docs_retrieved=cached_deep.get("metrics", {}).get("docs_retrieved", 0),
+                    chunks_processed=cached_deep.get("metrics", {}).get("chunks_processed", 0),
+                    retrieval_scores=cached_deep.get("metrics", {}).get("retrieval_scores", []),
+                )
+            except Exception:
+                logger.warning("Failed to log deep cached stream metrics", exc_info=True)
             # Populate Quick Cache
             cache.set(quick_key, cached_deep, ttl=3600)
             yield json.dumps({"step": "cached", "answer": cached_deep["answer"]}) + "\n"
@@ -365,6 +445,22 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         retrieval_time = time.monotonic() - retrieval_start
 
         if not docs:
+            # Log metrics even for failures
+            try:
+                from .metrics import log_query
+                log_query(
+                    question=query,
+                    response_time=time.monotonic() - total_start,
+                    answer_length=0,
+                    retrieval_time=retrieval_time,
+                    generation_time=0,
+                    docs_retrieved=0,
+                    chunks_processed=0,
+                    retrieval_scores=[],
+                )
+            except Exception:
+                pass
+
             yield json.dumps({
                 "step": "done",
                 "answer": "Maaf, saya tidak menemukan informasi relevan mengenai pertanyaan tersebut di dalam dokumen.",
@@ -375,7 +471,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
 
         # Step 3: Reranking
         yield json.dumps({"step": "reranking"}) + "\n"
-        top_docs = rerank(standalone_query, docs, top_k=RETRIEVAL_K)
+        top_docs = rerank(standalone_query, docs)
         metadata["reranked_docs"] = len(top_docs)
 
         # Step 4: LLM Answer Generation (Streaming)

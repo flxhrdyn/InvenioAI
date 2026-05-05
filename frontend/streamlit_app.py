@@ -10,6 +10,30 @@ import time
 
 import requests
 import streamlit as st
+from pathlib import Path
+
+# Add backend to path so we can use CacheManager
+sys.path.append(str(Path(__file__).parent.parent / "backend"))
+from app.cache_manager import CacheManager
+
+# Singleton-like getter for CacheManager in frontend
+@st.cache_resource
+def get_frontend_cache():
+    return CacheManager()
+
+CHAT_HISTORY_CACHE_KEY = "invenio_persistent_chat_history"
+
+def load_persistent_history():
+    cache = get_frontend_cache()
+    return cache.get(CHAT_HISTORY_CACHE_KEY) or []
+
+def save_persistent_history(messages):
+    cache = get_frontend_cache()
+    cache.set(CHAT_HISTORY_CACHE_KEY, messages)
+
+def clear_persistent_history():
+    cache = get_frontend_cache()
+    cache.set(CHAT_HISTORY_CACHE_KEY, None)
 
 st.set_page_config(
     page_title="InvenioAI | Intelligent RAG",
@@ -22,7 +46,6 @@ from theme import COLORS
 
 API_BASE_URL = os.getenv("INVENIOAI_API_BASE_URL", "http://localhost:8000").rstrip("/")
 
-ACTIVE_PAGE_KEY = "invenioai_active_page"
 
 
 def _is_hf_spaces_runtime() -> bool:
@@ -79,12 +102,8 @@ ASSISTANT_TYPING_WORD_DELAY_SECONDS = _get_assistant_word_delay_seconds()
 ASSISTANT_TYPING_MAX_WORDS = _get_assistant_typing_max_words()
 
 
-def _set_active_page(page: str) -> None:
-    st.session_state[ACTIVE_PAGE_KEY] = page
-
-
 def _is_chat_active() -> bool:
-    return st.session_state.get(ACTIVE_PAGE_KEY, "chat") == "chat"
+    return True
 
 
 def _get_upload_duration_history() -> list[float]:
@@ -171,9 +190,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Mark this page as active early so long-running UI updates can stop when the
-# user navigates to another page (e.g. Dashboard).
-_set_active_page("chat")
+# Active page tracking is now handled by Streamlit's multi-page system
 
 
 # ── Design System ─────────────────────────────────────────────────────────────
@@ -882,6 +899,7 @@ def maybe_resume_pending_job():
                     "content": answer,
                     "sources": sources
                 })
+                save_persistent_history(st.session_state.messages)
                 st.session_state.pop("pending_job_id", None)
                 st.session_state.pop("pending_job_prompt", None)
                 st.rerun()
@@ -1009,6 +1027,7 @@ with st.sidebar:
                     resp = requests.delete(f"{API_BASE_URL}/documents", timeout=60)
                     resp.raise_for_status()
                     st.session_state.messages = []
+                    clear_persistent_history()
                     _fetch_indexed_documents.clear()
                     st.rerun()
                 except requests.exceptions.ConnectionError:
@@ -1022,27 +1041,16 @@ with st.sidebar:
     with col2:
         if st.button("💬 Clear Chat", use_container_width=True):
             st.session_state.messages = []
+            clear_persistent_history()
             st.rerun()
 
     st.markdown("<hr>", unsafe_allow_html=True)
     
-    # Navigation
-    st.markdown('<div class="section-label">Navigation</div>', unsafe_allow_html=True)
-    page = st.radio(
-        "Select Page",
-        ["Chat", "Dashboard"],
-        index=0 if st.session_state.get(ACTIVE_PAGE_KEY, "chat") == "chat" else 1,
-        label_visibility="collapsed"
-    )
-    if page == "Chat":
-        _set_active_page("chat")
-    else:
-        _set_active_page("dashboard")
 
 
 # ── Chat ──────────────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = load_persistent_history()
 
 # Welcome screen when no messages
 if _is_chat_active():
@@ -1129,6 +1137,7 @@ if prompt := st.chat_input("Ask something about your documents..."):
             st.warning("⚠️ No documents indexed yet. Please upload a PDF in the sidebar first.")
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
+        save_persistent_history(st.session_state.messages)
         with st.chat_message("user"):
             st.markdown(prompt)
 
@@ -1144,60 +1153,10 @@ if prompt := st.chat_input("Ask something about your documents..."):
             with st.chat_message("assistant"):
                 _render_assistant_message(reply)
             st.session_state.messages.append({"role": "assistant", "content": reply})
+            save_persistent_history(st.session_state.messages)
         else:
             st.session_state["pending_job_id"] = job_id
             st.session_state["pending_job_prompt"] = prompt
             maybe_resume_pending_job()
 
-elif st.session_state.get(ACTIVE_PAGE_KEY) == "dashboard":
-    st.markdown('<h1 style="font-size: 28px; font-weight: 700; margin-bottom: 24px;">Analytics Dashboard</h1>', unsafe_allow_html=True)
-    
-    data, err = fetch_metrics()
-    if err:
-        st.error(err)
-    elif data:
-        # Top Row Metrics
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.markdown(f'''<div class="metric-card">
-                <div class="metric-value">{data["total_queries"]}</div>
-                <div class="metric-label">Total Queries</div>
-            </div>''', unsafe_allow_html=True)
-        with m2:
-            st.markdown(f'''<div class="metric-card">
-                <div class="metric-value">{data["avg_response_time"]}s</div>
-                <div class="metric-label">Avg. Latency</div>
-            </div>''', unsafe_allow_html=True)
-        with m3:
-            st.markdown(f'''<div class="metric-card">
-                <div class="metric-value">{data["total_documents_indexed"]}</div>
-                <div class="metric-label">Indexed Docs</div>
-            </div>''', unsafe_allow_html=True)
-        with m4:
-            ir = data.get("ir_quality", {})
-            hit_rate = f"{ir.get('hit_rate', 0)*100:.0f}%"
-            st.markdown(f'''<div class="metric-card">
-                <div class="metric-value">{hit_rate}</div>
-                <div class="metric-label">IR Hit Rate</div>
-            </div>''', unsafe_allow_html=True)
-            
-        # Charts
-        st.markdown('<div class="section-label">Performance Trends</div>', unsafe_allow_html=True)
-        history = data.get("query_history", [])
-        if history:
-            import pandas as pd
-            df = pd.DataFrame(history)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            
-            # Latency Chart
-            st.subheader("Latency History (seconds)")
-            st.line_chart(df.set_index('timestamp')[['response_time', 'retrieval_time', 'generation_time']])
-            
-            # Details Table
-            st.subheader("Recent Queries")
-            st.dataframe(df[['timestamp', 'question', 'response_time', 'docs_retrieved']].sort_values('timestamp', ascending=False), use_container_width=True)
-        else:
-            st.info("No query history available yet. Send some messages to see analytics!")
-    else:
-        st.warning("No data returned from metrics API.")
 

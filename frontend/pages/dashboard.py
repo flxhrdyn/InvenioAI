@@ -422,7 +422,9 @@ st.markdown('<div class="section-title">🗂️ Query History (Core)</div>', uns
 
 if per_q:
     df_table = pd.DataFrame(per_q)
-    df_table = df_table.iloc[::-1].reset_index(drop=True)  # newest first
+    if not df_table.empty:
+        df_table['timestamp'] = pd.to_datetime(df_table['timestamp'])
+        df_table = df_table.sort_values('timestamp', ascending=False).reset_index(drop=True)
 
     display_cols = {
         "question":        "Question",
