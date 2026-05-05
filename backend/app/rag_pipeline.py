@@ -113,8 +113,8 @@ async def rewrite_query_async(query: str, history: list[str]) -> str:
     if not history:
         return query
 
-    context = "\n".join([f"- {msg}" for msg in history[-3:]])
-    prompt = QUERY_REWRITE_PROMPT.format(query=query, context=context)
+    history_text = "\n".join([f"- {msg}" for msg in history[-3:]])
+    prompt = QUERY_REWRITE_PROMPT.format(question=query, history=history_text)
 
     try:
         llm = _get_llm()
@@ -283,6 +283,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     total_start = time.monotonic()
     cache = get_cache_manager()
     quick_key = _get_cache_key(query, chat_history)
+    logger.info(f"DEBUG: quick_key generation - query='{query}', history_len={len(chat_history)}")
 
     # Layer 1: Quick Cache
     cached = cache.get(quick_key)
@@ -319,7 +320,9 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         standalone_query = await rewrite_query_async(query, chat_history)
         
         # Layer 2: Deep Cache
-        deep_key = f"rag_deep_cache:{hashlib.md5(standalone_query.strip().lower().encode()).hexdigest()}"
+        standalone_hash = hashlib.md5(standalone_query.strip().lower().encode()).hexdigest()
+        deep_key = f"rag_deep_cache:{standalone_hash}"
+        logger.info(f"DEBUG: standalone_query='{standalone_query}' (hash={standalone_hash})")
         cached_deep = cache.get(deep_key)
         if cached_deep:
             logger.info(f"RAG Stream Deep Cache Hit: {standalone_query[:50]}...")

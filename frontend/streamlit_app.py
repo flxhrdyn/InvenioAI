@@ -4,6 +4,7 @@ This Streamlit app is a thin client for the FastAPI backend. Configure the
 backend URL with `INVENIOAI_API_BASE_URL` (defaults to `http://localhost:8000`).
 """
 
+import json
 import os
 import sys
 import time
@@ -1066,15 +1067,6 @@ if _is_chat_active():
                 </style>
                 ''', unsafe_allow_html=True)
 
-
-# Input
-if prompt := st.chat_input("Ask something about your documents..."):
-    if not get_indexed_files():
-        with st.chat_message("assistant"):
-            st.warning("⚠️ No documents indexed yet. Please upload a PDF in the sidebar first.")
-    else:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        save_persistent_history(st.session_state.messages)
 def run_streaming_query(prompt: str, history: list[str]):
     """Consume the SSE stream from the backend and update the UI in real-time."""
     
