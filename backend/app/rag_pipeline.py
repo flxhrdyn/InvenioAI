@@ -12,12 +12,13 @@ import time
 from functools import lru_cache
 from typing import Any
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 
-from .config import GEMINI_API_KEY, LLM_MODEL, RETRIEVAL_K
+from .config import GROQ_API_KEY, LLM_MODEL, RETRIEVAL_K
 from .qdrant_conn import close_qdrant_client, is_qdrant_client_closed_error
 from .reranker import rerank
-from .retriever import build_retriever, retrieve_documents
+from .retriever import build_retriever, retrieve_documents, retrieve_documents_async
+import json
 from .utils import format_docs
 
 
@@ -54,15 +55,15 @@ Sources:
 
 
 @lru_cache(maxsize=1)
-def _get_llm() -> ChatGoogleGenerativeAI:
-    if not GEMINI_API_KEY:
+def _get_llm() -> ChatGroq:
+    if not GROQ_API_KEY:
         raise ValueError(
-            "GEMINI_API_KEY belum di-set. Isi di .env (lihat .env.example) sebelum menjalankan query."
+            "GROQ_API_KEY belum di-set. Isi di .env (lihat .env.example) sebelum menjalankan query."
         )
 
-    return ChatGoogleGenerativeAI(
+    return ChatGroq(
         model=LLM_MODEL,
-        google_api_key=GEMINI_API_KEY,
+        groq_api_key=GROQ_API_KEY,
         temperature=0,
     )
 
@@ -146,6 +147,26 @@ def _run_rag_pipeline_once(question: str, history: Any) -> dict[str, Any]:
         pass
 
 
+async def rewrite_query_async(query: str, history: list[str]) -> str:
+    """Rewrite query to make it standalone using context asynchronously."""
+    if not history:
+        return query
+
+    context = "\n".join([f"- {msg}" for msg in history[-3:]])
+    prompt = QUERY_REWRITE_PROMPT.format(query=query, context=context)
+
+    try:
+        llm = _get_llm()
+        response = await llm.ainvoke(prompt)
+        content = response.content
+        if isinstance(content, str):
+            rewritten = content.strip()
+            return rewritten if rewritten else query
+        return query
+    except Exception as e:
+        logger.error(f"Query rewrite failed: {e}")
+        return query
+
 def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
     """Run the RAG pipeline.
 
@@ -164,3 +185,83 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             raise
 
     raise RuntimeError("Unexpected RAG retry state")
+import json
+
+async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
+    from app.rag_pipeline import rewrite_query_async, QA_PROMPT, _get_llm
+    from app.retriever import build_retriever, retrieve_documents_async
+    from app.qdrant_conn import is_qdrant_client_closed_error, close_qdrant_client
+    from app.reranker import rerank
+    from app.config import RETRIEVAL_K
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Step 1: Rewrite Query asynchronously
+        yield json.dumps({"step": "rewriting"}) + "\n"
+        standalone_query = await rewrite_query_async(query, chat_history)
+
+        # Step 2: Retrieval
+        yield json.dumps({"step": "retrieving", "query": standalone_query}) + "\n"
+        retriever, vectorstore, client = build_retriever()
+        
+        try:
+            docs, metadata = await retrieve_documents_async(
+                standalone_query,
+                dense_retriever=retriever,
+                client=client,
+            )
+        except Exception as e:
+            if is_qdrant_client_closed_error(e):
+                logger.info("Qdrant client closed, attempting to reopen...")
+                close_qdrant_client()
+                retriever, vectorstore, client = build_retriever()
+                docs, metadata = await retrieve_documents_async(
+                    standalone_query,
+                    dense_retriever=retriever,
+                    client=client,
+                )
+            else:
+                raise
+
+        if not docs:
+            yield json.dumps({
+                "step": "done",
+                "answer": "Maaf, saya tidak menemukan informasi relevan mengenai pertanyaan tersebut di dalam dokumen.",
+                "docs": [],
+                "metadata": metadata
+            }) + "\n"
+            return
+
+        # Step 3: Reranking
+        yield json.dumps({"step": "reranking"}) + "\n"
+        top_docs = rerank(standalone_query, docs, top_k=RETRIEVAL_K)
+        metadata["reranked_docs"] = len(top_docs)
+
+        # Step 4: LLM Answer Generation (Streaming)
+        yield json.dumps({"step": "generating"}) + "\n"
+        
+        context_text = "\n\n---\n\n".join(
+            [f"[Sumber: {d.metadata.get('source_file', 'unknown')}]\n{d.page_content}" for d in top_docs]
+        )
+        prompt = QA_PROMPT.format(context=context_text, question=standalone_query)
+        
+        llm = _get_llm()
+        
+        full_answer = ""
+        async for chunk in llm.astream(prompt):
+            if chunk.content:
+                full_answer += chunk.content
+                yield json.dumps({"step": "token", "content": chunk.content}) + "\n"
+
+        # Final result with sources
+        yield json.dumps({
+            "step": "done",
+            "answer": full_answer,
+            "docs": [d.model_dump() for d in top_docs],
+            "metadata": metadata
+        }) + "\n"
+
+    except Exception as e:
+        logger.exception("Pipeline error")
+        yield json.dumps({"step": "error", "message": str(e)}) + "\n"

@@ -13,13 +13,9 @@ from functools import lru_cache
 from . import config as _config  # noqa: F401
 from .config import EMBEDDING_MODEL
 
-try:
-    from langchain_huggingface import HuggingFaceEmbeddings
-except ImportError:  # pragma: no cover - compatibility fallback
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 @lru_cache(maxsize=1)
-def get_embeddings() -> HuggingFaceEmbeddings:
+def get_embeddings() -> FastEmbedEmbeddings:
     """Return a cached embedding model instance."""
-    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    return FastEmbedEmbeddings(model_name=EMBEDDING_MODEL)

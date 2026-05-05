@@ -11,12 +11,14 @@ import time
 import requests
 import streamlit as st
 
-# Add project root to the import path so `app.*` and `frontend.*` imports work
-# when running via `streamlit run`.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app.config import UPLOAD_DIR
-from app.metrics import log_query
-from frontend.theme import COLORS
+st.set_page_config(
+    page_title="InvenioAI | Intelligent RAG",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+from theme import COLORS
 
 API_BASE_URL = os.getenv("INVENIOAI_API_BASE_URL", "http://localhost:8000").rstrip("/")
 
@@ -167,14 +169,19 @@ _set_active_page("chat")
 
 st.markdown(f"""
 <style>
-/* ── Google Font ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 /* ── Global reset ── */
 html, body, [class*="css"] {{
     font-family: 'Inter', sans-serif;
     background-color: {COLORS['bg_primary']};
     color: {COLORS['text_primary']};
+}}
+
+/* ── Center main content area in wide layout ── */
+.block-container {{
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
 }}
 
 /* ── App background ── */
@@ -330,52 +337,57 @@ html, body, [class*="css"] {{
     font-size: 13px;
 }}
 
-/* ── Chat input ── */
+/* ── Aggressive Wide Layout Fix ── */
+.block-container {{
+    max-width: 1200px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+}}
+
+/* ── Chat input (Force Wide Rectangular) ── */
 [data-testid="stChatInput"] {{
-    border-top: 1px solid {COLORS['border']};
-    background-color: {COLORS['bg_secondary']};
-    padding: 14px 16px 18px;
+    background-color: transparent !important;
+    padding: 24px 20px 40px !important;
+    width: 100% !important;
 }}
 [data-testid="stChatInput"] > div {{
-    max-width: 980px;
-    margin: 0 auto;
+    width: 100% !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
 }}
 [data-testid="stChatInput"] form {{
-    background: {COLORS['bg_card']};
-    border: 1px solid {COLORS['border']};
-    border-radius: 16px;
-    padding: 10px 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.22);
+    background: {COLORS['bg_card']} !important;
+    border: 1px solid {COLORS['border']} !important;
+    border-radius: 16px !important; 
+    padding: 8px 20px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
 }}
 [data-testid="stChatInput"] textarea {{
     background-color: transparent !important;
     border: none !important;
-    border-radius: 12px !important;
     color: {COLORS['text_primary']} !important;
-    font-size: 14px !important;
+    font-size: 15px !important;
     font-family: 'Inter', sans-serif !important;
-    min-height: 24px !important;
-    padding: 10px 12px !important;
+    padding: 12px 0 !important;
     box-shadow: none !important;
-}}
-[data-testid="stChatInput"] textarea:focus {{
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
+    line-height: 1.5 !important;
+    flex-grow: 1 !important;
 }}
 [data-testid="stChatInput"] button {{
     background: {COLORS['accent']} !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    padding: 0 !important;
-    border-radius: 12px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 10px !important;
     border: none !important;
-    margin-left: 8px !important;
+    margin-left: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     flex-shrink: 0 !important;
-}}
-[data-testid="stChatInput"] button:hover {{
-    background: {COLORS['accent_hover']} !important;
 }}
 
 /* ── Chat message base ── */
@@ -404,7 +416,7 @@ html, body, [class*="css"] {{
     border-radius: 20px 4px 20px 20px !important;
     padding: 10px 18px !important;
     width: fit-content !important;
-    max-width: min(640px, 70%) !important;
+    max-width: min(820px, 80%) !important;
     margin-top: 2px !important;
     margin-left: auto !important;
     margin-right: 0 !important;
@@ -443,7 +455,7 @@ html, body, [class*="css"] {{
     border-radius: 4px 20px 20px 20px !important;
     padding: 10px 18px !important;
     width: fit-content !important;
-    max-width: min(820px, 86%) !important;
+    max-width: min(1000px, 90%) !important;
     margin-top: 2px !important;
     margin-left: 0 !important;
     margin-right: auto !important;
@@ -607,7 +619,7 @@ def _fetch_indexed_documents(api_base_url: str) -> list[str]:
 
 
 def get_indexed_files() -> list[str]:
-    # Prefer backend source-of-truth (Qdrant metadata), fall back to local disk.
+    # Prefer backend source-of-truth (Qdrant metadata).
     try:
         docs = _fetch_indexed_documents(API_BASE_URL)
         if docs:
@@ -615,20 +627,16 @@ def get_indexed_files() -> list[str]:
     except Exception:
         pass
 
-    try:
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        return [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith(".pdf")]
-    except Exception:
-        return []
+    return []
 
 
 def format_error_message(response: requests.Response) -> str:
     text = response.text.lower()
-    if "quota" in text or "resourceexhausted" in text or "429" in text or "resource_exhausted" in text:
+    if "quota" in text or "rate_limit" in text or "429" in text:
         return (
-            "⚠️ **Gemini API quota exceeded.** "
-            "You are on the free tier which has a daily request limit. "
-            "Try again tomorrow or upgrade to a paid plan."
+            "⚠️ **Groq API Rate Limit exceeded.** "
+            "You have reached the request limit for your Groq plan. "
+            "Wait a moment or check your Groq dashboard."
         )
     try:
         detail = response.json().get("detail", response.text)
@@ -787,19 +795,6 @@ def build_reply_from_job_result(prompt: str, job: dict) -> str:
     result = (job or {}).get("result") or {}
     answer = result.get("answer", "")
     sources = result.get("sources", "")
-    api_metrics = result.get("metrics", {})
-
-    if answer:
-        log_query(
-            prompt,
-            api_metrics.get("total_time", 0),
-            len(answer),
-            retrieval_time=api_metrics.get("retrieval_time", 0),
-            generation_time=api_metrics.get("generation_time", 0),
-            docs_retrieved=api_metrics.get("docs_retrieved", 0),
-            chunks_processed=api_metrics.get("chunks_processed", 0),
-            retrieval_scores=api_metrics.get("retrieval_scores", []),
-        )
 
     reply = answer or "❌ **Error:** Empty response."
     if sources:

@@ -7,7 +7,7 @@
   [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
   [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain.com/)
   [![Qdrant](https://img.shields.io/badge/Qdrant-FF4B4B?style=for-the-badge&logo=qdrant&logoColor=white)](https://qdrant.tech/)
-  [![Gemini](https://img.shields.io/badge/Google_Gemini-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white)](https://aistudio.google.com/)
+  [![Groq](https://img.shields.io/badge/Groq-Llama_3.1-f3a536?style=for-the-badge&logo=openai&logoColor=white)](https://groq.com/)
   [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 </div>
 
@@ -37,7 +37,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 ### Backend
 - **Framework**: FastAPI
 - **RAG Engine**: LangChain
-- **Models**: Google Gemini 3.1 Flash Lite Preview, all-MiniLM-L6-v2 (Local Embedding)
+- **Models**: Google Groq (Llama 3.1) 3.1 Flash Lite Preview, all-MiniLM-L6-v2 (Local Embedding)
 - **Reranker**: Cross-Encoder (MS-MARCO MiniLM)
 - **Search**: BM25 (Lexical) + Qdrant (Dense)
 
@@ -68,7 +68,7 @@ graph TD
         API -->|Query| RAG[Hybrid Retriever]
         RAG -->|RRF Fusion| Fuse[Candidate Fusion]
         Fuse -->|Reranking| Rerank[Cross-Encoder]
-        Rerank -->|Context| LLM[Gemini LLM]
+        Rerank -->|Context| LLM[Groq (Llama 3.1) LLM]
     end
     
     subgraph Presentation_Layer [UI & Analytics]
@@ -99,7 +99,7 @@ InvenioAI is optimized for speed and retrieval precision while maintaining low o
 
 ### Prerequisites
 *   Python 3.10+
-*   Google Gemini API Key
+*   Google Groq (Llama 3.1) API Key
 *   Qdrant Instance (Optional, defaults to local storage)
 
 ### Execution Procedures
@@ -132,7 +132,7 @@ docker run -p 7860:7860 invenioai
 ## Configuration
 
 The application is configured via `.env`. Key variables include:
-- `GEMINI_API_KEY`: Required for LLM and Query Rewriting.
+- `GROQ_API_KEY`: Required for LLM and Query Rewriting.
 - `QDRANT_URL`: Optional server URL (defaults to local `./qdrant_storage`).
 - `INVENIOAI_ENABLE_HYBRID_SEARCH`: Toggle dense+lexical mode (Default: `1`).
 - `INVENIOAI_DELETE_UPLOADED_PDFS`: Clean up storage after indexing (Default: `0`).

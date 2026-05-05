@@ -19,7 +19,7 @@ This Space runs InvenioAI as a single Docker container:
 
 Required:
 
-- Secret: `GEMINI_API_KEY`
+- Secret: `GROQ_API_KEY`
 
 Recommended:
 
@@ -33,7 +33,6 @@ Recommended:
 
 ## Notes
 
-- This Space is self-contained: Streamlit calls the backend at `http://127.0.0.1:8000` inside the same container.
-- First build can take a while because ML dependencies may be large.
-- In HF Spaces, `start.sh` defaults Streamlit CORS/XSRF to `false/false` for
-	proxy compatibility. Set env vars above if you want to override this.
+- This Space is optimized for a monorepo structure. For production deployments with Docker Compose, see `docker-compose.yml`.
+- First build can take a while because ML dependencies (FastEmbed) are downloaded during first run.
+- Ensure `GROQ_API_KEY` is set in Space Secrets.

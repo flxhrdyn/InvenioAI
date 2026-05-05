@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - CACHE_TYPE=redis
+      - REDIS_URL=redis://redis:6379/0
+      - INVENIOAI_LLM_MODEL=llama3-8b-8192
+    volumes:
+      - ./backend/.cache:/app/.cache
+      - ./backend/qdrant_data:/app/qdrant_data
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8501:8501"
+    environment:
+      # Pass internal docker network backend URL to Streamlit
+      - INVENIOAI_API_BASE_URL=http://backend:8000
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:

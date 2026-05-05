@@ -1,6 +1,7 @@
 # Environment Variables
 .env
-.env.local
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -30,6 +31,8 @@ venv/
 env/
 ENV/
 .venv
+.python-version
+uv.lock
 
 # IDEs
 .vscode/
@@ -48,23 +51,17 @@ ENV/
 htmlcov/
 .tox/
 
-# Project Specific - Vector Store
-vectorstore/
-qdrant_storage/
-*.pkl
-
-# Project Specific - Runtime data
+# Project Specific - Data & Cache
+**/qdrant_data/
+**/qdrant_storage/
+**/.cache/
+**/uploaded_docs/*
+!**/uploaded_docs/.gitkeep
 metrics.json
-
-# Project Specific - Uploaded Documents
-uploaded_docs/*
-!uploaded_docs/.gitkeep
+*.pkl
 
 # Streamlit
 .streamlit/
-
-# Cache
-.cache/
 
 # Logs
 *.log

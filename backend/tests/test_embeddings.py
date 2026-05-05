@@ -10,46 +10,46 @@ import pytest
 from app.embeddings import get_embeddings
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_get_embeddings_returns_object(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_get_embeddings_returns_object(mock_fastembed):
     """Test that get_embeddings returns an embeddings object (no network)."""
     instance = MagicMock()
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     assert embeddings is instance
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embeddings_has_embed_query_method(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embeddings_has_embed_query_method(mock_fastembed):
     """Test that embeddings object has embed_query method (no network)."""
     instance = MagicMock()
     instance.embed_query = MagicMock()
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     assert hasattr(embeddings, "embed_query")
     assert callable(embeddings.embed_query)
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embeddings_has_embed_documents_method(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embeddings_has_embed_documents_method(mock_fastembed):
     """Test that embeddings object has embed_documents method (no network)."""
     instance = MagicMock()
     instance.embed_documents = MagicMock()
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     assert hasattr(embeddings, "embed_documents")
     assert callable(embeddings.embed_documents)
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embed_query_returns_vector(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embed_query_returns_vector(mock_fastembed):
     """Test that embedding a query returns a vector (mocked)."""
     instance = MagicMock()
     instance.embed_query = MagicMock(return_value=[0.1, 0.2, 0.3])
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     vector = embeddings.embed_query("Hello world")
@@ -59,12 +59,12 @@ def test_embed_query_returns_vector(mock_hf_embeddings):
     assert all(isinstance(x, float) for x in vector)
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embed_documents_returns_vectors(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embed_documents_returns_vectors(mock_fastembed):
     """Test that embedding documents returns a list of vectors (mocked)."""
     instance = MagicMock()
     instance.embed_documents = MagicMock(return_value=[[0.1, 0.2], [0.2, 0.3]])
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     docs = ["First document", "Second document"]
@@ -75,12 +75,12 @@ def test_embed_documents_returns_vectors(mock_hf_embeddings):
     assert all(isinstance(v, list) for v in vectors)
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embed_query_consistent_dimensions(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embed_query_consistent_dimensions(mock_fastembed):
     """Test that embeddings have consistent dimensions (mocked)."""
     instance = MagicMock()
     instance.embed_query = MagicMock(side_effect=[[0.1, 0.2], [0.2, 0.3]])
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     vector1 = embeddings.embed_query("First text")
@@ -89,12 +89,12 @@ def test_embed_query_consistent_dimensions(mock_hf_embeddings):
     assert len(vector1) == len(vector2)
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embed_empty_string(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embed_empty_string(mock_fastembed):
     """Test embedding an empty string (mocked)."""
     instance = MagicMock()
     instance.embed_query = MagicMock(return_value=[0.0])
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
 
     embeddings = get_embeddings()
     vector = embeddings.embed_query("")
@@ -103,12 +103,13 @@ def test_embed_empty_string(mock_hf_embeddings):
     assert len(vector) > 0
 
 
-@patch("app.embeddings.HuggingFaceEmbeddings")
-def test_embed_special_characters(mock_hf_embeddings):
+@patch("app.embeddings.FastEmbedEmbeddings")
+def test_embed_special_characters(mock_fastembed):
     """Test embedding text with special characters (mocked)."""
     instance = MagicMock()
     instance.embed_query = MagicMock(return_value=[0.1])
-    mock_hf_embeddings.return_value = instance
+    mock_fastembed.return_value = instance
+
 
     embeddings = get_embeddings()
     text = "Hello @world! #python $100 & more..."

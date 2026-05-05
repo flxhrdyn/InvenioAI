@@ -13,40 +13,42 @@ import threading
 import time
 import uuid
 from typing import Any, Dict, List, Literal, Optional
+from contextlib import asynccontextmanager
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+
 from .embeddings import get_embeddings
 from .index_api import router as index_router
 from .config import PRELOAD_EMBEDDINGS_ON_STARTUP
 from .rag_pipeline import rag_pipeline
 from .qdrant_conn import close_qdrant_client
 
-
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    if not PRELOAD_EMBEDDINGS_ON_STARTUP:
+        logger.info("Embedding preload skipped (INVENIOAI_PRELOAD_EMBEDDINGS=0)")
+    else:
+        try:
+            get_embeddings()
+            logger.info("Embedding model preloaded")
+        except Exception:
+            logger.warning("Embedding preload failed; falling back to lazy init", exc_info=True)
+            
+    yield
+    
+    # Shutdown logic
+    close_qdrant_client()
 
-app = FastAPI(title="InvenioAI API")
+
+app = FastAPI(title="InvenioAI API", lifespan=lifespan)
 app.include_router(index_router)
 
 
-@app.on_event("startup")
-def _startup() -> None:
-    # Optional warm-up; disabled by default for constrained deployments.
-    if not PRELOAD_EMBEDDINGS_ON_STARTUP:
-        logger.info("Embedding preload skipped (INVENIOAI_PRELOAD_EMBEDDINGS=0)")
-        return
-
-    try:
-        get_embeddings()
-        logger.info("Embedding model preloaded")
-    except Exception:
-        logger.warning("Embedding preload failed; falling back to lazy init", exc_info=True)
-
-
-@app.on_event("shutdown")
-def _shutdown() -> None:
-    close_qdrant_client()
 
 
 class Query(BaseModel):
@@ -127,7 +129,28 @@ def query(q: Query) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
 
 
-@app.post("/query/jobs")
+@app.post("/query/stream", tags=["query"])
+async def query_stream_endpoint(request: Query):
+    """Execute a query and stream the response using Server-Sent Events (SSE)."""
+    
+    # We use a generator that returns the async pipeline stream
+    async def event_generator():
+        from .rag_pipeline import rag_pipeline_stream_async
+        async for chunk in rag_pipeline_stream_async(request.question, request.history):
+            # The pipeline yields JSON strings with a trailing newline
+            # We format it as SSE "data: <json>\n\n"
+            # Note: rag_pipeline_stream_async actually yields json string + \n
+            # Let's clean it up for SSE standard
+            json_str = chunk.strip()
+            yield f"data: {json_str}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )
+
+
+@app.post("/query/jobs", tags=["query"], deprecated=True)
 def create_query_job(q: Query, background_tasks: BackgroundTasks):
     job_id = str(uuid.uuid4())
     now = time.time()

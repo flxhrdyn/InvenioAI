@@ -84,9 +84,9 @@ def test_model_names():
 
 def test_api_key_handling():
     """API key can be missing in dev/test environments."""
-    from app.config import GEMINI_API_KEY
+    from app.config import GROQ_API_KEY
     # Should either be a string or None (if not set in .env)
-    assert GEMINI_API_KEY is None or isinstance(GEMINI_API_KEY, str)
+    assert GROQ_API_KEY is None or isinstance(GROQ_API_KEY, str)
 
 
 class TestConfigurationIntegrity:

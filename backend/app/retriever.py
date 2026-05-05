@@ -14,14 +14,14 @@ from typing import Tuple
 
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from langchain.retrievers.multi_query import MultiQueryRetriever
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_classic.retrievers.multi_query import MultiQueryRetriever
+from langchain_groq import ChatGroq
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
 from .embeddings import get_embeddings
 from .config import (
-    GEMINI_API_KEY,
+    GROQ_API_KEY,
     HYBRID_DENSE_WEIGHT,
     HYBRID_FUSION_LIMIT,
     HYBRID_LEXICAL_K,
@@ -175,9 +175,9 @@ def build_retriever() -> Tuple[MultiQueryRetriever, QdrantVectorStore, QdrantCli
     Returns a tuple of (retriever, vectorstore, client). Raises a ValueError if
     the API key is missing or the expected Qdrant collection does not exist.
     """
-    if not GEMINI_API_KEY:
+    if not GROQ_API_KEY:
         raise ValueError(
-            "GEMINI_API_KEY belum di-set. Isi di .env (lihat .env.example) sebelum menjalankan query."
+            "GROQ_API_KEY belum di-set. Isi di .env (lihat .env.example) sebelum menjalankan query."
         )
 
     # Embedding model (cached)
@@ -210,10 +210,10 @@ def build_retriever() -> Tuple[MultiQueryRetriever, QdrantVectorStore, QdrantCli
         }
     )
 
-    # Gemini LLM
-    llm = ChatGoogleGenerativeAI(
+    # Groq LLM
+    llm = ChatGroq(
         model=LLM_MODEL,
-        google_api_key=GEMINI_API_KEY,
+        groq_api_key=GROQ_API_KEY,
         temperature=0
     )
 
@@ -270,6 +270,65 @@ def retrieve_documents(
         weights=[HYBRID_DENSE_WEIGHT, HYBRID_LEXICAL_WEIGHT],
         max_results=HYBRID_FUSION_LIMIT,
     )
+    if not fused_docs:
+        metadata["mode"] = "dense-fallback"
+        return dense_docs, metadata
+
+    metadata.update(
+        {
+            "mode": "hybrid",
+            "lexical_docs": len(lexical_docs),
+            "fused_docs": len(fused_docs),
+        }
+    )
+    return fused_docs, metadata
+
+import asyncio
+
+async def retrieve_documents_async(
+    query: str,
+    dense_retriever: MultiQueryRetriever,
+    client: QdrantClient,
+) -> Tuple[List[Document], Dict[str, Any]]:
+    """Retrieve documents asynchronously with dense-only or hybrid strategy."""
+    
+    # Run dense retrieval asynchronously
+    dense_docs = await dense_retriever.ainvoke(query)
+    
+    metadata: Dict[str, Any] = {
+        "mode": "dense",
+        "dense_docs": len(dense_docs),
+        "lexical_docs": 0,
+        "fused_docs": len(dense_docs),
+    }
+
+    if not USE_HYBRID_SEARCH:
+        return dense_docs, metadata
+
+    # Getting BM25 retriever is sync, but it's cached or fast enough
+    bm25_retriever = _get_bm25_retriever(client)
+    if bm25_retriever is None:
+        metadata["mode"] = "dense-fallback"
+        return dense_docs, metadata
+
+    try:
+        # Run lexical retrieval (ainvoke if supported, else fallback to invoke in a thread)
+        if hasattr(bm25_retriever, "ainvoke"):
+            lexical_docs = await bm25_retriever.ainvoke(query)
+        else:
+            lexical_docs = await asyncio.to_thread(bm25_retriever.invoke, query)
+    except Exception:
+        logger.warning("Lexical retrieval failed; fallback to dense branch", exc_info=True)
+        metadata["mode"] = "dense-fallback"
+        return dense_docs, metadata
+
+    fused_docs = reciprocal_rank_fusion(
+        [dense_docs, lexical_docs],
+        rrf_k=HYBRID_RRF_K,
+        weights=[HYBRID_DENSE_WEIGHT, HYBRID_LEXICAL_WEIGHT],
+        max_results=HYBRID_FUSION_LIMIT,
+    )
+    
     if not fused_docs:
         metadata["mode"] = "dense-fallback"
         return dense_docs, metadata

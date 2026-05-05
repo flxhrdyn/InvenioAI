@@ -121,10 +121,17 @@ HYBRID_LEXICAL_WEIGHT = _env_float("INVENIOAI_HYBRID_LEXICAL_WEIGHT", default=1.
 RERANK_TOP_K = 5
 
 # Models
-LLM_MODEL = _env_str("INVENIOAI_LLM_MODEL", "gemini-3.1-flash-lite-preview")
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-RERANKER_MODEL = (os.getenv("RERANKER_MODEL") or "cross-encoder/ms-marco-MiniLM-L-6-v2").strip()
+LLM_MODEL = _env_str("INVENIOAI_LLM_MODEL", "llama3-8b-8192")
+EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+RERANKER_MODEL = "ms-marco-MultiBERT-L-12"
 
 # API Keys
-_gemini_api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
-GEMINI_API_KEY = _gemini_api_key or None
+_groq_api_key = (os.getenv("GROQ_API_KEY") or "").strip()
+GROQ_API_KEY = _groq_api_key or None
+
+# Caching
+CACHE_TYPE = _env_str("CACHE_TYPE", "diskcache") # 'redis' or 'diskcache'
+REDIS_URL = _env_str("REDIS_URL", "redis://localhost:6379/0")
+
+# RAG Fusion
+NUM_FUSION_QUERIES = _env_int("INVENIOAI_NUM_FUSION_QUERIES", default=2, min_value=1)

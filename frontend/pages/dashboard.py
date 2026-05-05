@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from frontend.theme import COLORS
 
-from app.metrics import (
+from backend.app.metrics import (
     compute_ir_metrics,
     load_metrics,
     per_query_ir_metrics,
