@@ -236,32 +236,34 @@ html, body, [class*="css"] {{
     margin-top: 8px;
 }}
 
-/* ── Doc pill ── */
+/* ── Simple Doc Pill ── */
 .doc-pill {{
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     background: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
     border-radius: 8px;
     padding: 10px 14px;
-    margin-bottom: 8px;
     font-size: 13px;
     color: {COLORS['text_primary']};
+    width: 100%;
+    margin-bottom: 4px;
 }}
 .doc-pill-icon {{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
     color: {COLORS['accent']};
     flex-shrink: 0;
 }}
 .doc-pill-text {{
-    min-width: 0;
-    line-height: 1.45;
-    word-break: break-word;
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}}
+.delete-btn-container {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }}
 
 /* ── Empty state ── */
@@ -323,6 +325,29 @@ html, body, [class*="css"] {{
 .stButton > button[kind="secondary"]:hover {{
     background: {COLORS['border']};
     color: {COLORS['text_primary']};
+}}
+
+/* ── Minimalist Delete Link ── */
+.delete-action-row {{
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -8px;
+    margin-bottom: 12px;
+}}
+.small-delete-btn button {{
+    background: transparent !important;
+    color: {COLORS['text_muted']} !important;
+    border: none !important;
+    font-size: 11px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    text-decoration: none !important;
+}}
+.small-delete-btn button:hover {{
+    color: #ff4b4b !important;
+    text-decoration: underline !important;
+    background: transparent !important;
 }}
 
 /* ── File uploader ── */
@@ -912,19 +937,32 @@ with st.sidebar:
     if indexed:
         for f in indexed:
             name = f[:-4] if f.endswith(".pdf") else f
+            # Document name pill
             st.markdown(
                 f'''<div class="doc-pill">
-                <span class="doc-pill-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M7 3.75h7.5L19.25 8.5V19A2.25 2.25 0 0 1 17 21.25H7A2.25 2.25 0 0 1 4.75 19V6A2.25 2.25 0 0 1 7 3.75Z" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M14.5 3.75V8.5H19.25" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M8 12.75h8M8 16.25h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </span>
-                <span class="doc-pill-text">{name}</span>
+                <span class="doc-pill-icon">📄</span>
+                <span class="doc-pill-text" title="{f}">{name}</span>
                 </div>''',
                 unsafe_allow_html=True,
             )
+            
+            # Delete action below, aligned to the right
+            cols = st.columns([0.6, 0.4])
+            with cols[1]:
+                st.markdown('<div class="small-delete-btn">', unsafe_allow_html=True)
+                if st.button(f"🗑️ Delete", key=f"del_{f}"):
+                    try:
+                        resp = requests.delete(
+                            f"{API_BASE_URL}/documents/delete", 
+                            params={"filename": f},
+                            timeout=30
+                        )
+                        resp.raise_for_status()
+                        _fetch_indexed_documents.clear()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed: {e}")
+                st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.markdown(
             '<div class="empty-state">📭 No documents yet.<br>Upload a PDF to get started.</div>',

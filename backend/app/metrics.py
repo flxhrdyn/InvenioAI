@@ -9,12 +9,14 @@ import math
 import os
 import tempfile
 from datetime import datetime
+import threading
 from typing import Any, Dict, List, Optional
 
 from .config import METRICS_FILE
 
 
 logger = logging.getLogger(__name__)
+_metrics_lock = threading.Lock()
 
 
 def load_metrics() -> Dict[str, Any]:
@@ -85,39 +87,41 @@ def log_query(
     retrieval_scores: Optional[List[float]] = None,
 ) -> None:
     """Log a query with RAG metrics."""
-    metrics = load_metrics()
-    
-    metrics["total_queries"] += 1
-    metrics["total_response_time"] += response_time
-    metrics["total_retrieval_time"] += retrieval_time
-    metrics["total_generation_time"] += generation_time
-    metrics["total_docs_retrieved"] += docs_retrieved
-    metrics["total_chunks_processed"] += chunks_processed
-    
-    # Keep only last 100 queries to prevent file from growing too large
-    if len(metrics["query_history"]) >= 100:
-        metrics["query_history"].pop(0)
-    
-    metrics["query_history"].append({
-        "timestamp": datetime.now().isoformat(),
-        "question": question[:100],  # Truncate long questions
-        "response_time": round(response_time, 2),
-        "retrieval_time": round(retrieval_time, 2),
-        "generation_time": round(generation_time, 2),
-        "answer_length": answer_length,
-        "docs_retrieved": docs_retrieved,
-        "chunks_processed": chunks_processed,
-        "retrieval_scores": retrieval_scores or [],
-    })
-    
-    save_metrics(metrics)
+    with _metrics_lock:
+        metrics = load_metrics()
+        
+        metrics["total_queries"] += 1
+        metrics["total_response_time"] += response_time
+        metrics["total_retrieval_time"] += retrieval_time
+        metrics["total_generation_time"] += generation_time
+        metrics["total_docs_retrieved"] += docs_retrieved
+        metrics["total_chunks_processed"] += chunks_processed
+        
+        # Keep only last 100 queries to prevent file from growing too large
+        if len(metrics["query_history"]) >= 100:
+            metrics["query_history"].pop(0)
+        
+        metrics["query_history"].append({
+            "timestamp": datetime.now().isoformat(),
+            "question": question[:100],  # Truncate long questions
+            "response_time": round(response_time, 2),
+            "retrieval_time": round(retrieval_time, 2),
+            "generation_time": round(generation_time, 2),
+            "answer_length": answer_length,
+            "docs_retrieved": docs_retrieved,
+            "chunks_processed": chunks_processed,
+            "retrieval_scores": retrieval_scores or [],
+        })
+        
+        save_metrics(metrics)
 
 
 def log_document_indexed() -> None:
     """Record that a document was indexed."""
-    metrics = load_metrics()
-    metrics["total_documents_indexed"] += 1
-    save_metrics(metrics)
+    with _metrics_lock:
+        metrics = load_metrics()
+        metrics["total_documents_indexed"] += 1
+        save_metrics(metrics)
 
 
 def get_avg_response_time() -> float:
@@ -178,17 +182,18 @@ def get_generation_efficiency() -> float:
 
 def reset_metrics() -> None:
     """Reset all stored metrics."""
-    metrics = {
-        "total_queries": 0,
-        "total_documents_indexed": 0,
-        "total_response_time": 0,
-        "total_retrieval_time": 0,
-        "total_generation_time": 0,
-        "total_docs_retrieved": 0,
-        "total_chunks_processed": 0,
-        "query_history": []
-    }
-    save_metrics(metrics)
+    with _metrics_lock:
+        metrics = {
+            "total_queries": 0,
+            "total_documents_indexed": 0,
+            "total_response_time": 0,
+            "total_retrieval_time": 0,
+            "total_generation_time": 0,
+            "total_docs_retrieved": 0,
+            "total_chunks_processed": 0,
+            "query_history": []
+        }
+        save_metrics(metrics)
 
 
 # ── IR Metric Computation ─────────────────────────────────────────────────────

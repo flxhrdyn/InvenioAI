@@ -20,6 +20,7 @@ from .reranker import rerank
 from .retriever import build_retriever, retrieve_documents, retrieve_documents_async
 import json
 from .utils import format_docs
+from .metrics import log_query
 
 
 logger = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ def _run_rag_pipeline_once(question: str, history: Any) -> dict[str, Any]:
 
         total_time = time.monotonic() - total_start
 
-        return {
+        res = {
             "answer": answer_msg.content,
             "sources": sources,
             "metrics": {
@@ -141,6 +142,20 @@ def _run_rag_pipeline_once(question: str, history: Any) -> dict[str, Any]:
                 "fused_candidates": retrieval_meta.get("fused_docs", len(retrieved_docs)),
             },
         }
+
+        # Log metrics to disk
+        log_query(
+            question=question,
+            response_time=total_time,
+            answer_length=len(res["answer"]),
+            retrieval_time=retrieval_time,
+            generation_time=generation_time,
+            docs_retrieved=len(retrieved_docs),
+            chunks_processed=len(reranked_docs),
+            retrieval_scores=retrieval_scores,
+        )
+
+        return res
     finally:
         # Qdrant client is managed as a process-wide singleton and closed on
         # application shutdown.
@@ -185,16 +200,15 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             raise
 
     raise RuntimeError("Unexpected RAG retry state")
-import json
 
 async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
-    from app.rag_pipeline import rewrite_query_async, QA_PROMPT, _get_llm
-    from app.retriever import build_retriever, retrieve_documents_async
-    from app.qdrant_conn import is_qdrant_client_closed_error, close_qdrant_client
-    from app.reranker import rerank
-    from app.config import RETRIEVAL_K
-    import logging
-    logger = logging.getLogger(__name__)
+    from .retriever import build_retriever, retrieve_documents_async
+    from .qdrant_conn import is_qdrant_client_closed_error, close_qdrant_client
+    from .reranker import rerank
+    from .config import RETRIEVAL_K
+    import time
+
+    total_start = time.monotonic()
 
     try:
         # Step 1: Rewrite Query asynchronously
@@ -205,6 +219,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         yield json.dumps({"step": "retrieving", "query": standalone_query}) + "\n"
         retriever, vectorstore, client = build_retriever()
         
+        retrieval_start = time.monotonic()
         try:
             docs, metadata = await retrieve_documents_async(
                 standalone_query,
@@ -223,6 +238,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
                 )
             else:
                 raise
+        retrieval_time = time.monotonic() - retrieval_start
 
         if not docs:
             yield json.dumps({
@@ -244,23 +260,45 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         context_text = "\n\n---\n\n".join(
             [f"[Sumber: {d.metadata.get('source_file', 'unknown')}]\n{d.page_content}" for d in top_docs]
         )
-        prompt = QA_PROMPT.format(context=context_text, question=standalone_query)
+        prompt = RAG_PROMPT.format(context=context_text, question=standalone_query, sources="")
         
         llm = _get_llm()
         
+        generation_start = time.monotonic()
         full_answer = ""
         async for chunk in llm.astream(prompt):
             if chunk.content:
                 full_answer += chunk.content
                 yield json.dumps({"step": "token", "content": chunk.content}) + "\n"
+        generation_time = time.monotonic() - generation_start
+        
+        total_time = time.monotonic() - total_start
 
         # Final result with sources
         yield json.dumps({
             "step": "done",
             "answer": full_answer,
-            "docs": [d.model_dump() for d in top_docs],
-            "metadata": metadata
+            "docs": [d.model_dump() if hasattr(d, "model_dump") else str(d) for d in top_docs],
+            "metadata": {
+                **metadata,
+                "total_time": round(total_time, 2),
+                "retrieval_time": round(retrieval_time, 2),
+                "generation_time": round(generation_time, 2),
+            }
         }) + "\n"
+
+        # Log metrics to disk
+        from .metrics import log_query
+        log_query(
+            question=query,
+            response_time=total_time,
+            answer_length=len(full_answer),
+            retrieval_time=retrieval_time,
+            generation_time=generation_time,
+            docs_retrieved=len(docs),
+            chunks_processed=len(top_docs),
+            retrieval_scores=metadata.get("retrieval_scores", []),
+        )
 
     except Exception as e:
         logger.exception("Pipeline error")

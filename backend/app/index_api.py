@@ -13,6 +13,7 @@ import threading
 import time
 import uuid
 from typing import Any, Dict, Literal, Optional
+from qdrant_client.http import models
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 
@@ -233,6 +234,56 @@ def list_documents():
             break
 
     return {"documents": sorted(documents), "count": len(documents)}
+
+
+
+@router.delete("/documents/delete")
+def delete_document(filename: str):
+    """Delete a specific document by its filename from the vector store."""
+    safe_name = os.path.basename(filename)
+    client = get_qdrant_client()
+    try:
+        # Ensure payload index exists for metadata.source_file to allow filtering for deletion
+        try:
+            client.create_payload_index(
+                collection_name=QDRANT_COLLECTION,
+                field_name="metadata.source_file",
+                field_schema=models.PayloadSchemaType.KEYWORD,
+            )
+        except Exception:
+            pass
+
+        # Qdrant delete call using a filter on metadata.source_file
+        client.delete(
+            collection_name=QDRANT_COLLECTION,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="metadata.source_file",
+                            match=models.MatchValue(value=safe_name),
+                        ),
+                    ]
+                )
+            ),
+        )
+        
+        # Also try to delete from local UPLOAD_DIR if it exists
+        file_path = os.path.join(UPLOAD_DIR, safe_name)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                logger.warning("Could not delete physical file %s: %s", file_path, e)
+            
+    except Exception as exc:
+        logger.exception("Failed to delete document %s", safe_name)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Delete failed: {str(exc)}",
+        )
+    
+    return {"status": f"Document '{safe_name}' deleted successfully"}
 
 
 @router.delete("/documents")
