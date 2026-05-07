@@ -12,11 +12,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements (contains core RAG dependencies)
-COPY backend/requirements.txt .
+# Copy requirements
+COPY backend/requirements.txt backend_requirements.txt
+COPY frontend/requirements.txt frontend_requirements.txt
+
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install -r requirements.txt
+
+# Install both backend and frontend dependencies
+RUN uv pip install -r backend_requirements.txt
+RUN uv pip install -r frontend_requirements.txt
 
 # Final stage
 FROM python:3.12-slim-bookworm
