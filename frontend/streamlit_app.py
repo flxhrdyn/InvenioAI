@@ -274,6 +274,13 @@ header {{
     background-color: var(--invenio-bg-card) !important;
     overflow-wrap: break-word !important;
     word-break: break-word !important;
+    margin-bottom: 0.5rem !important;
+}}
+
+/* Ensure status widget (loading) doesn't show an empty box */
+[data-testid="stStatusWidget"] {{
+    border: none !important;
+    background: transparent !important;
 }}
 
 .stCaption {{

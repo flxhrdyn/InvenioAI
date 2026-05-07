@@ -55,16 +55,16 @@ async def lifespan(app: FastAPI):
     try:
         from .qdrant_conn import get_qdrant_client
         from .metrics import sync_indexed_docs_count
-        from .config import QDRANT_COLLECTION_NAME
+        from .config import QDRANT_COLLECTION
         
         client = get_qdrant_client()
         offset = None
         unique_files = set()
-        logger.info(f"Starting reconciliation for collection: {QDRANT_COLLECTION_NAME}")
+        logger.info(f"Starting reconciliation for collection: {QDRANT_COLLECTION}")
         
         while True:
             points, offset = client.scroll(
-                collection_name=QDRANT_COLLECTION_NAME,
+                collection_name=QDRANT_COLLECTION,
                 limit=100,
                 offset=offset,
                 with_payload=True,
