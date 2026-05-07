@@ -38,6 +38,10 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy source code
 COPY . .
 
+# Create necessary directories and set permissions for Hugging Face (UID 1000)
+RUN mkdir -p /app/uploaded_docs /app/qdrant_storage /app/.cache && \
+    chmod -R 777 /app/uploaded_docs /app/qdrant_storage /app/.cache
+
 # Ensure scripts are executable
 RUN chmod +x start.sh
 
