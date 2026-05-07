@@ -599,7 +599,8 @@ if _is_chat_active():
                                 page = item["page"]
                                 if page:
                                     st.caption(f"Page {page}")
-                                st.markdown(f"> {text}")
+                                # Use a zero-width space to prevent Markdown from treating leading numbers as list items
+                                st.markdown(f"> \u200b{text.strip()}")
 
 def run_streaming_query(prompt: str, history: list[str]):
     """Consume the SSE stream from the backend and update the UI in real-time."""

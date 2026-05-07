@@ -126,6 +126,14 @@ def log_document_indexed() -> None:
         save_metrics(metrics)
 
 
+def sync_indexed_docs_count(count: int) -> None:
+    """Manually sync the total documents indexed count (e.g. from vector store)."""
+    with _metrics_lock:
+        metrics = load_metrics()
+        metrics["total_documents_indexed"] = count
+        save_metrics(metrics)
+
+
 def get_avg_response_time() -> float:
     """Return average total response time."""
     metrics = load_metrics()

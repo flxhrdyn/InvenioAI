@@ -1,5 +1,5 @@
 ---
-title: InvenioAI - Advanced RAG
+title: InvenioAI - Document Intelligence
 emoji: 🚀
 colorFrom: indigo
 colorTo: blue

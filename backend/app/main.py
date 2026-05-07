@@ -50,6 +50,35 @@ async def lifespan(app: FastAPI):
             logger.info("Embedding model preloaded")
         except Exception:
             logger.warning("Embedding preload failed; falling back to lazy init", exc_info=True)
+    
+    # Reconcile metrics: Sync total_documents_indexed from Qdrant persistent storage
+    try:
+        from .qdrant_conn import get_qdrant_client
+        from .metrics import sync_indexed_docs_count
+        from .config import QDRANT_COLLECTION_NAME
+        
+        client = get_qdrant_client()
+        offset = None
+        unique_files = set()
+        while True:
+            points, offset = client.scroll(
+                collection_name=QDRANT_COLLECTION_NAME,
+                limit=100,
+                offset=offset,
+                with_payload=["file"],
+                with_vectors=False
+            )
+            for p in points:
+                if p.payload and "file" in p.payload:
+                    unique_files.add(p.payload["file"])
+            if offset is None:
+                break
+        
+        count = len(unique_files)
+        logger.info(f"Reconciliation: Found {count} unique documents in persistent storage. Syncing metrics.")
+        sync_indexed_docs_count(count)
+    except Exception as e:
+        logger.warning(f"Failed to reconcile metrics on startup: {e}")
             
     yield
     
