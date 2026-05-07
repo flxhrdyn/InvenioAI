@@ -310,7 +310,7 @@ div[data-testid="stStatusWidget"] > details > summary {{
 
 /* ── Avatar Alignment ── */
 div[data-testid="stChatMessageAvatar"] {{
-    margin-top: 4px !important;
+    margin-top: 8px !important;
 }}
 
 /* ── Button Transitions ── */
