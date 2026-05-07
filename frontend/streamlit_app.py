@@ -463,7 +463,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Add documents to build your AI knowledge base", type=["pdf"])
     if uploaded_file:
         upload_status_slot = st.empty()
-        if st.button("⚡ Process & Index", type="primary", use_container_width=True):
+        if st.button("⚡ Process & Index", use_container_width=True):
             with st.spinner("Indexing document..."):
                 job_id, err = create_upload_job(uploaded_file)
                 if err or not job_id:
@@ -564,10 +564,15 @@ if _is_chat_active():
             if thoughts:
                 with st.expander("🧠 Thought Process", expanded=False):
                     if isinstance(thoughts, list):
-                        # Join with newlines for list of steps
                         st.markdown("\n".join(thoughts))
                     else:
-                        st.markdown(thoughts)
+                        # Clean up clumped "Step X" markers by adding newlines
+                        formatted_thoughts = thoughts
+                        for i in range(1, 6):
+                            marker = f"Step {i}:"
+                            if marker in formatted_thoughts:
+                                formatted_thoughts = formatted_thoughts.replace(marker, f"\n\n**{marker}**")
+                        st.markdown(formatted_thoughts.strip())
             
             st.markdown(message["content"])
         
