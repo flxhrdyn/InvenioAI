@@ -13,15 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY backend/requirements.txt backend_requirements.txt
-COPY frontend/requirements.txt frontend_requirements.txt
+COPY requirements.txt .
 
 RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install both backend and frontend dependencies
-RUN uv pip install -r backend_requirements.txt
-RUN uv pip install -r frontend_requirements.txt
+# Install all dependencies at once
+RUN uv pip install -r requirements.txt
 
 # Final stage
 FROM python:3.12-slim-bookworm
