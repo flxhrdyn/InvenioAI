@@ -80,6 +80,11 @@ h1, h2, h3, h4, h5, h6, p, li, button, input, textarea, [data-testid="stMetricVa
 footer {{ visibility: hidden; }}
 header {{ background: transparent !important; }}
 
+/* ── Sidebar Spacing ── */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+    gap: 0.90rem !important;
+}}
+
 </style>
 """, unsafe_allow_html=True)
 

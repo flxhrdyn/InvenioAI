@@ -235,6 +235,16 @@ h1, h2, h3, h4, h5, h6, p, li, button, input, textarea, [data-testid="stChatMess
     opacity: 0.8;
 }}
 
+/* ── Sidebar Spacing ── */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+    gap: 0.75rem !important;
+}}
+
+/* Tighten spacing between elements in the sidebar to match Dashboard */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+    gap: 0.75rem !important;
+}}
+
 /* ── Container Layout ── */
 .block-container {{
     max-width: 1100px !important;
@@ -475,7 +485,7 @@ with st.sidebar:
                         else:
                             st.error(message)
 
-    st.divider()
+
 
     # Knowledge Base
     st.subheader("🧠 Knowledge Base")
@@ -507,8 +517,10 @@ with st.sidebar:
                             st.error(f"❌ Failed: {e}")
     else:
         st.write("No documents yet.")
-
+    # Force spacing to match Dashboard (cancel out list container padding)
+    st.markdown('<div style="margin-top: -70px;"></div>', unsafe_allow_html=True)
     
+    # Action Buttons (tightly coupled to Knowledge Base)
     if st.button("🗑️ Delete All Documents", use_container_width=True):
         with st.spinner("Deleting..."):
             try:
