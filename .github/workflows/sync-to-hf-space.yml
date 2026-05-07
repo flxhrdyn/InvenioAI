@@ -65,7 +65,7 @@ jobs:
           # Export a curated subset from the current commit.
           git archive --format=tar HEAD \
             backend frontend \
-            README.hf.md Dockerfile start.sh .dockerignore \
+            README.hf.md Dockerfile requirements.txt start.sh .dockerignore \
             | tar -x -C "${TMP_REPO}"
 
           # Hugging Face Spaces expects the card as README.md at repo root.
