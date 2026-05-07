@@ -73,7 +73,15 @@ async def lifespan(app: FastAPI):
             for p in points:
                 if p.payload:
                     # Check common keys for filename
-                    fname = p.payload.get("file") or p.payload.get("filename") or p.payload.get("metadata", {}).get("file")
+                    # Note: index_data.py uses 'source_file'
+                    fname = (
+                        p.payload.get("source_file") or 
+                        p.payload.get("file") or 
+                        p.payload.get("filename") or 
+                        p.payload.get("source") or
+                        p.payload.get("metadata", {}).get("source_file") or
+                        p.payload.get("metadata", {}).get("file")
+                    )
                     if fname:
                         unique_files.add(fname)
             if offset is None:
@@ -166,7 +174,14 @@ async def sync_metrics_endpoint():
             )
             for p in points:
                 if p.payload:
-                    fname = p.payload.get("file") or p.payload.get("filename") or p.payload.get("metadata", {}).get("file")
+                    fname = (
+                        p.payload.get("source_file") or 
+                        p.payload.get("file") or 
+                        p.payload.get("filename") or 
+                        p.payload.get("source") or
+                        p.payload.get("metadata", {}).get("source_file") or
+                        p.payload.get("metadata", {}).get("file")
+                    )
                     if fname:
                         unique_files.add(fname)
             if offset is None:
