@@ -141,7 +141,18 @@ def fetch_metrics() -> tuple[dict | None, str | None]:
     try:
         resp = requests.get(f"{API_BASE_URL}/metrics", timeout=10)
         if resp.status_code == 200:
-            return resp.json(), None
+            data = resp.json()
+            # If docs is 0, try to force a sync once on frontend startup/refresh
+            if data.get("total_documents_indexed", 0) == 0:
+                try:
+                    requests.post(f"{API_BASE_URL}/metrics/sync", timeout=5)
+                    # Re-fetch after sync
+                    resp = requests.get(f"{API_BASE_URL}/metrics", timeout=10)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                except:
+                    pass
+            return data, None
         return None, f"❌ **Error {resp.status_code}:** Failed to load metrics."
     except Exception as e:
         return None, f"❌ **Connection Error:** {e}"

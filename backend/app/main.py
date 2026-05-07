@@ -144,6 +144,42 @@ async def query_stream_endpoint(request: Query):
     )
 
 
+@app.post("/metrics/sync", tags=["analytics"])
+async def sync_metrics_endpoint():
+    """Manually trigger a sync of indexed document counts from Qdrant."""
+    try:
+        from .qdrant_conn import get_qdrant_client
+        from .metrics import sync_indexed_docs_count
+        from .config import QDRANT_COLLECTION
+        
+        client = get_qdrant_client()
+        offset = None
+        unique_files = set()
+        
+        while True:
+            points, offset = client.scroll(
+                collection_name=QDRANT_COLLECTION,
+                limit=100,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False
+            )
+            for p in points:
+                if p.payload:
+                    fname = p.payload.get("file") or p.payload.get("filename") or p.payload.get("metadata", {}).get("file")
+                    if fname:
+                        unique_files.add(fname)
+            if offset is None:
+                break
+        
+        count = len(unique_files)
+        sync_indexed_docs_count(count)
+        return {"status": "success", "count": count}
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 @app.get("/metrics", tags=["analytics"])
 def get_metrics() -> Dict[str, Any]:
     """Return aggregate RAG performance and quality metrics."""
