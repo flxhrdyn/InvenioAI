@@ -1,5 +1,5 @@
 ---
-title: InvenioAI - RAG Dashboard Fix
+title: InvenioAI - RAG Dashboard
 emoji: 🚀
 colorFrom: indigo
 colorTo: blue

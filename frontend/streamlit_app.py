@@ -277,10 +277,14 @@ header {{
     margin-bottom: 0.5rem !important;
 }}
 
-/* Ensure status widget (loading) doesn't show an empty box */
-[data-testid="stStatusWidget"] {{
+/* Ultra-aggressive fix for status/thinking empty boxes */
+div[data-testid="stStatusWidget"], 
+div[data-testid="stStatusWidget"] > details,
+div[data-testid="stStatusWidget"] > details > summary {{
     border: none !important;
     background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
 }}
 
 .stCaption {{
