@@ -73,7 +73,7 @@ graph TD
         Rewriter -->|Multi-Query| RAG[Hybrid Retriever]
         RAG -->|RRF Fusion| Fuse[RAG Fusion]
         Fuse -->|Reranking| Rerank[Cross-Encoder]
-        Rerank -->|Context| LLM[Groq (Llama 3.1) LLM]
+        Rerank -->|Context| LLM["Groq (Llama 3.1) LLM"]
     end
     
     subgraph Presentation_Layer [UI & Analytics]
