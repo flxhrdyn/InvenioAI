@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 from typing import Any, Dict, Literal, Optional
-from qdrant_client.http import models
+from qdrant_client import models
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 
@@ -239,12 +239,23 @@ def list_documents():
 
 
 @router.delete("/documents/delete")
-def delete_document(filename: str):
+def delete_document(filename: str, retry: bool = True):
     """Delete a specific document by its filename from the vector store."""
+    from .qdrant_conn import is_qdrant_client_closed_error
     safe_name = os.path.basename(filename)
     client = get_qdrant_client()
     try:
-        # Ensure payload index exists for metadata.source_file to allow filtering for deletion
+        # Check if collection exists first
+        try:
+            collections = client.get_collections().collections
+            existing = [c.name for c in collections]
+            if QDRANT_COLLECTION not in existing:
+                # Collection doesn't exist, so document isn't there
+                return {"status": "success", "message": f"Document '{safe_name}' not found in index (collection missing)"}
+        except Exception as e:
+            logger.warning("Failed to check collection existence: %s", e)
+
+        # Ensure payload indices exist for both fields we filter on
         try:
             client.create_payload_index(
                 collection_name=QDRANT_COLLECTION,
@@ -254,9 +265,16 @@ def delete_document(filename: str):
         except Exception:
             pass
 
-        # Qdrant delete call using a filter on metadata.source_file
-        # Qdrant delete call using a filter. 
-        # We check both source_file and source to be safe with older entries.
+        try:
+            client.create_payload_index(
+                collection_name=QDRANT_COLLECTION,
+                field_name="metadata.source",
+                field_schema=models.PayloadSchemaType.KEYWORD,
+            )
+        except Exception:
+            pass
+
+        # Qdrant delete call using a filter on both metadata fields
         client.delete(
             collection_name=QDRANT_COLLECTION,
             points_selector=models.FilterSelector(
@@ -268,7 +286,7 @@ def delete_document(filename: str):
                         ),
                         models.FieldCondition(
                             key="metadata.source",
-                            match=models.MatchText(text=safe_name),
+                            match=models.MatchValue(value=safe_name),
                         ),
                     ]
                 )
@@ -284,13 +302,19 @@ def delete_document(filename: str):
                 logger.warning("Could not delete physical file %s: %s", file_path, e)
             
     except Exception as exc:
-        logger.exception("Failed to delete document %s", safe_name)
+        if retry and is_qdrant_client_closed_error(exc):
+            logger.warning("Qdrant client closed during delete; retrying once...")
+            from .qdrant_conn import recreate_qdrant_client
+            recreate_qdrant_client()
+            return delete_document(filename, retry=False)
+        
+        logger.error(f"Failed to delete document '{safe_name}': {type(exc).__name__}: {exc}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Delete failed: {str(exc)}",
+            detail=f"Delete failed for '{safe_name}': {type(exc).__name__}: {exc}",
         )
     
-    return {"status": f"Document '{safe_name}' deleted successfully"}
+    return {"status": "success", "message": f"Document '{safe_name}' deleted successfully"}
 
 
 @router.delete("/documents")

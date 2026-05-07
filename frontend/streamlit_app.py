@@ -417,7 +417,14 @@ with st.sidebar:
                         _fetch_indexed_documents.clear()
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Failed: {e}")
+                        if hasattr(e, 'response') and e.response is not None:
+                            try:
+                                detail = e.response.json().get("detail", e.response.text)
+                                st.error(f"❌ Delete Failed: {detail}")
+                            except Exception:
+                                st.error(f"❌ Delete Failed: {e.response.text}")
+                        else:
+                            st.error(f"❌ Failed: {e}")
     else:
         st.write("No documents yet.")
 
@@ -462,9 +469,12 @@ if _is_chat_active():
             # Display Thinking Process (if any)
             thoughts = message.get("thoughts")
             if thoughts:
-                with st.status("🧠 Thinking Process", expanded=False):
-                    for t in thoughts:
-                        st.write(t)
+                with st.expander("🧠 Thought Process", expanded=False):
+                    if isinstance(thoughts, list):
+                        # Join with newlines for list of steps
+                        st.markdown("\n".join(thoughts))
+                    else:
+                        st.markdown(thoughts)
             
             st.markdown(message["content"])
         
@@ -524,34 +534,45 @@ def run_streaming_query(prompt: str, history: list[str]):
                     data = json.loads(line_str[6:])
                     step = data.get("step")
                     
-                    if step == "rewriting":
-                        msg = "🔍 Rewriting query for context..."
-                        thought_container.write(msg)
-                        thoughts.append(msg)
+                    if step == "cached":
+                        thought_container.update(label="⚡ Serving from cache...", state="running")
+                    elif step == "rewriting":
+                        thought_container.update(label="🔍 Rewriting query for context...")
                     elif step == "retrieving":
-                        msg = "🛰️ Searching document library..."
-                        thought_container.write(msg)
-                        thoughts.append(msg)
+                        thought_container.update(label="🛰️ Searching document library...")
                     elif step == "reranking":
-                        msg = "🎯 Ranking relevant chunks..."
-                        thought_container.write(msg)
-                        thoughts.append(msg)
+                        thought_container.update(label="🎯 Ranking relevant chunks...")
                     elif step == "generating":
-                        msg = "🧠 Synthesizing answer..."
-                        thought_container.write(msg)
-                        thoughts.append(msg)
+                        thought_container.update(label="🧠 Synthesizing answer...")
+                    elif step == "thinking":
+                        content = data.get("content", "")
+                        # We accumulate thoughts (ONLY CoT content)
+                        thoughts.append(content)
+                        
+                        # Update loading status label with a snippet
+                        snippet = content.strip().replace("\n", " ")[:80]
+                        if snippet:
+                            # Highlight Step transitions
+                            if "Step " in snippet:
+                                thought_container.update(label=f"⚙️ {snippet}")
+                            else:
+                                thought_container.update(label=f"🧠 {snippet}...")
                     elif step == "token":
                         content = data.get("content", "")
                         full_answer += content
                         # Collapse thoughts once we start generating heavily
-                        if len(full_answer) > 50:
-                            thought_container.update(label="✅ Thought Process Completed", state="complete", expanded=False)
+                        thought_container.update(label="✅ Reasoning Complete", state="complete", expanded=False)
                         answer_placeholder.markdown(full_answer + " ▌")
                     elif step == "done":
                         full_answer = data.get("answer", full_answer)
                         sources = data.get("sources", [])
+                        backend_thoughts = data.get("thoughts")
+                        
+                        # Store only the CoT content as thoughts
+                        thoughts = backend_thoughts if backend_thoughts else "".join(thoughts)
+
                         answer_placeholder.markdown(full_answer)
-                        thought_container.update(label="✅ Thought Process Completed", state="complete", expanded=False)
+                        thought_container.update(label="✅ Reasoning Complete", state="complete", expanded=False)
                     elif step == "error":
                         error_msg = data.get("message", "Unknown backend error")
                         st.error(f"❌ **Pipeline Error:** {error_msg}")
@@ -594,5 +615,3 @@ if prompt := st.chat_input("Ask something about your documents..."):
             })
             save_persistent_history(st.session_state.messages)
             st.rerun()
-
-
