@@ -656,6 +656,16 @@ def run_streaming_query(prompt: str, history: list[str]):
                         # Collapse thoughts once we start generating heavily
                         thought_container.update(label="✅ Reasoning Complete", state="complete", expanded=False)
                         answer_placeholder.markdown(full_answer + " ▌")
+                        # 5. Auto-scroll to bottom (only when a query is active or just finished)
+                        if st.session_state.get("is_querying", False):
+                            st.markdown("""
+                                <script>
+                                const scrollTarget = window.parent.document.querySelector('.main .block-container');
+                                if (scrollTarget) {
+                                    scrollTarget.scrollTop = scrollTarget.scrollHeight;
+                                }
+                                </script>
+                            """, unsafe_allow_html=True)
                     elif step == "done":
                         full_answer = data.get("answer", full_answer)
                         sources = data.get("sources", [])
@@ -707,4 +717,12 @@ if prompt := st.chat_input("Ask something about your documents..."):
                 "thoughts": thoughts
             })
             save_persistent_history(st.session_state.messages)
+            st.markdown("""
+                <script>
+                const scrollTarget = window.parent.document.querySelector('.main .block-container');
+                if (scrollTarget) {
+                    scrollTarget.scrollTop = scrollTarget.scrollHeight;
+                }
+                </script>
+            """, unsafe_allow_html=True)
             st.rerun()
