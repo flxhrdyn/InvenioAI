@@ -60,25 +60,30 @@ async def lifespan(app: FastAPI):
         client = get_qdrant_client()
         offset = None
         unique_files = set()
+        logger.info(f"Starting reconciliation for collection: {QDRANT_COLLECTION_NAME}")
+        
         while True:
             points, offset = client.scroll(
                 collection_name=QDRANT_COLLECTION_NAME,
                 limit=100,
                 offset=offset,
-                with_payload=["file"],
+                with_payload=True,
                 with_vectors=False
             )
             for p in points:
-                if p.payload and "file" in p.payload:
-                    unique_files.add(p.payload["file"])
+                if p.payload:
+                    # Check common keys for filename
+                    fname = p.payload.get("file") or p.payload.get("filename") or p.payload.get("metadata", {}).get("file")
+                    if fname:
+                        unique_files.add(fname)
             if offset is None:
                 break
         
         count = len(unique_files)
-        logger.info(f"Reconciliation: Found {count} unique documents in persistent storage. Syncing metrics.")
+        logger.info(f"Reconciliation successful: Found {count} unique documents ({list(unique_files)[:5]}...). Syncing metrics.")
         sync_indexed_docs_count(count)
     except Exception as e:
-        logger.warning(f"Failed to reconcile metrics on startup: {e}")
+        logger.error(f"Critical failure during metrics reconciliation: {e}", exc_info=True)
             
     yield
     

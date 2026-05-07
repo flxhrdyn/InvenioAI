@@ -1,5 +1,5 @@
 ---
-title: InvenioAI - Document Intelligence
+title: InvenioAI - RAG Dashboard Fix
 emoji: 🚀
 colorFrom: indigo
 colorTo: blue
