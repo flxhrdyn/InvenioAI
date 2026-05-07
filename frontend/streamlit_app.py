@@ -561,13 +561,14 @@ if _is_chat_active():
                     if isinstance(thoughts, list):
                         st.markdown("\n".join(thoughts))
                     else:
-                        # Clean up clumped "Step X" markers by adding newlines
-                        formatted_thoughts = thoughts
-                        for i in range(1, 6):
-                            marker = f"Step {i}:"
-                            if marker in formatted_thoughts:
-                                formatted_thoughts = formatted_thoughts.replace(marker, f"\n\n**{marker}**")
-                        st.markdown(formatted_thoughts.strip())
+                        # Improved formatting using regex to avoid doubling stars and ensure clean breaks
+                        import re
+                        # 1. Standardize formatting for Step X:
+                        f_thoughts = re.sub(r'(?i)step\s*(\d+):', r'\n\n**Step \1:**', thoughts)
+                        # 2. Clean up any penumpukan bintang (e.g. ** **Step 1** **)
+                        f_thoughts = re.sub(r'\*+\s*\n\n\s*\*+', r'\n\n', f_thoughts)
+                        f_thoughts = re.sub(r'\*{3,}', '**', f_thoughts)
+                        st.markdown(f_thoughts.strip())
             
             st.markdown(message["content"])
         
@@ -719,11 +720,11 @@ if prompt := st.chat_input("Ask something about your documents..."):
             
             const observer = new MutationObserver(() => {
                 const newHeight = scrollTarget.scrollHeight;
-                if (newHeight > lastHeight) {
-                    // Only scroll if we are already near the bottom (tolerance 200px)
-                    const isNearBottom = (scrollTarget.scrollTop + scrollTarget.clientHeight) >= (lastHeight - 200);
-                    if (isNearBottom) {
-                        scrollTarget.scrollTo({ top: newHeight, behavior: 'smooth' });
+                if (Math.abs(newHeight - lastHeight) > 5) {
+                    // If we are at the bottom, stay at the bottom
+                    const isAtBottom = (scrollTarget.scrollTop + scrollTarget.clientHeight) >= (lastHeight - 50);
+                    if (isAtBottom) {
+                        scrollTarget.scrollTo({ top: newHeight, behavior: 'auto' });
                     }
                     lastHeight = newHeight;
                 }
