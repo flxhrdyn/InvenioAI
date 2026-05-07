@@ -1,7 +1,9 @@
 import asyncio
+import pytest
 import json
 from backend.app.rag_pipeline import rag_pipeline_stream_async
 
+@pytest.mark.asyncio
 async def test_stream():
     query = "Apa yang dimaksud dengan Universal Approximation Theorem?"
     chat_history = []

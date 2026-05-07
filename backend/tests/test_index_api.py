@@ -11,6 +11,12 @@ def test_delete_document_success(mock_get_qdrant):
     mock_qdrant = MagicMock()
     mock_get_qdrant.return_value = mock_qdrant
     
+    # Mock collection existence to proceed to delete
+    from app.index_api import QDRANT_COLLECTION
+    mock_coll = MagicMock()
+    mock_coll.name = QDRANT_COLLECTION
+    mock_qdrant.get_collections.return_value = MagicMock(collections=[mock_coll])
+    
     # Mocking scroll to simulate the document exists (used in list_documents)
     # We'll just assume it exists for the DELETE call.
     # The actual implementation of DELETE /documents/{filename} will be added.
@@ -22,7 +28,7 @@ def test_delete_document_success(mock_get_qdrant):
     
     # Assert
     assert response.status_code == 200
-    assert response.json() == {"status": f"Document '{filename}' deleted successfully"}
+    assert response.json() == {"status": "success", "message": f"Document '{filename}' deleted successfully"}
     
     # Verify Qdrant was called with correct filter
     # Expecting delete(collection_name=..., points_selector=...)

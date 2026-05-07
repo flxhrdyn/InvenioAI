@@ -23,7 +23,7 @@ def test_query_returns_source_nodes_with_metadata(mock_rerank, mock_retrieve, mo
         Document(page_content="Snippet teks 2", metadata={"source": "file_b.pdf", "score": 0.8, "page_number": 12})
     ]
     mock_retrieve.return_value = (docs, {"mode": "dense"})
-    mock_rerank.return_value = docs
+    mock_rerank.return_value = (docs, [0.9, 0.8])
     
     # Execute
     response = client.post("/query", json={"question": "test query"})

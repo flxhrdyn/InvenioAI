@@ -18,12 +18,13 @@ def test_query_updates_metrics():
     with patch("app.rag_pipeline.build_retriever") as mock_build, \
          patch("app.rag_pipeline.retrieve_documents") as mock_retrieve, \
          patch("app.rag_pipeline.rerank") as mock_rerank, \
-         patch("app.rag_pipeline._get_llm") as mock_llm:
+         patch("app.rag_pipeline._get_llm") as mock_llm, \
+         patch("app.rag_pipeline.rewrite_query", return_value="standalone"):
         
         # Setup mocks
         mock_build.return_value = (MagicMock(), MagicMock(), MagicMock())
         mock_retrieve.return_value = ([Document(page_content="test", metadata={"source": "test.pdf"})], {"mode": "dense"})
-        mock_rerank.return_value = [Document(page_content="test", metadata={"source": "test.pdf"})]
+        mock_rerank.return_value = ([Document(page_content="test", metadata={"source": "test.pdf"})], [0.9])
         
         mock_llm_inst = MagicMock()
         mock_llm_inst.invoke.return_value = MagicMock(content="AI is cool")

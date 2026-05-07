@@ -1,7 +1,9 @@
 import pytest
 import json
 import time
+import time
 from unittest.mock import patch, MagicMock
+from langchain_core.documents import Document
 from app.rag_pipeline import rag_pipeline, rag_pipeline_stream_async
 from app.metrics import load_metrics, reset_metrics
 
@@ -25,8 +27,8 @@ def test_rag_pipeline_logs_metrics_on_full_run():
         mock_vectorstore.similarity_search_with_relevance_scores.return_value = []
         
         mock_build.return_value = (MagicMock(), mock_vectorstore, MagicMock())
-        mock_retrieve.return_value = ([MagicMock(page_content="doc1")], {"mode": "dense"})
-        mock_rerank.return_value = [MagicMock(page_content="doc1", metadata={"source": "test.pdf"})]
+        mock_retrieve.return_value = ([Document(page_content="doc1", metadata={"source": "test.pdf"})], {"mode": "dense"})
+        mock_rerank.return_value = ([Document(page_content="doc1", metadata={"source": "test.pdf"})], [0.9])
         
         mock_llm_instance = MagicMock()
         mock_llm_instance.invoke.return_value = MagicMock(content="Real-ish Answer")
@@ -73,7 +75,7 @@ async def test_rag_pipeline_stream_async_logs_metrics():
     with patch("app.rag_pipeline.rewrite_query_async", return_value="standalone"), \
          patch("app.rag_pipeline.build_retriever") as mock_retriever_build, \
          patch("app.rag_pipeline.retrieve_documents_async") as mock_retrieve, \
-         patch("app.rag_pipeline.rerank", return_value=[MagicMock(page_content="doc1")]), \
+         patch("app.rag_pipeline.rerank", return_value=([Document(page_content="doc1", metadata={"source": "test.pdf"})], [0.9])), \
          patch("app.rag_pipeline._get_llm") as mock_llm, \
          patch("app.rag_pipeline.get_cache_manager") as mock_cache:
         
@@ -81,7 +83,7 @@ async def test_rag_pipeline_stream_async_logs_metrics():
         mock_retriever_build.return_value = (MagicMock(), MagicMock(), MagicMock())
         
         # Mocking async retrieval
-        mock_retrieve.return_value = ([MagicMock(page_content="doc1")], {"mode": "dense", "retrieval_scores": [0.9]})
+        mock_retrieve.return_value = ([Document(page_content="doc1", metadata={"source": "test.pdf"})], {"mode": "dense", "retrieval_scores": [0.9]})
         
         # Mocking LLM stream correctly
         async def mock_astream(*args, **kwargs):

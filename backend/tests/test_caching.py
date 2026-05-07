@@ -33,7 +33,8 @@ def test_rag_pipeline_saves_to_cache_on_miss(mock_cache):
     
     from langchain_core.documents import Document
     
-    with patch("app.rag_pipeline._run_rag_pipeline_with_query") as mock_run:
+    with patch("app.rag_pipeline._run_rag_pipeline_with_query") as mock_run, \
+         patch("app.rag_pipeline.rewrite_query", return_value="rewritten"):
         real_result = {"answer": "Real answer", "sources": []}
         mock_run.return_value = real_result
         
