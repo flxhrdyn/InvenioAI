@@ -1,7 +1,7 @@
 <div align="center">
 
-  # 🧠 InvenioAI — Document Q&A (RAG) + Analytics
-  **Hybrid RAG Pipeline, Semantic Search, and Multi-Document Intelligence.**
+  # 🧠 InvenioAI — Advanced RAG for Document Q&A
+  **Hybrid Search, RAG Fusion, and Chain-of-Thought (CoT) Reasoning.**
   
   [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
   [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -15,9 +15,9 @@
 
 ## Overview
 
-In the era of information density, extracting precise answers from large PDF collections is critical. **InvenioAI** is a high-performance **Document Q&A system** that implements a state-of-the-art **Hybrid RAG pipeline**.
+In the era of information density, extracting precise answers from large PDF collections is critical. **InvenioAI** is a high-performance **Advanced RAG system** that implements a state-of-the-art **Hybrid architecture**.
 
-It transforms static PDF documents into a searchable, intelligent knowledge base, allowing users to ask complex questions and receive answers grounded in retrieved context with verifiable source citations.
+It transforms static PDF documents into a searchable, intelligent knowledge base, allowing users to ask complex questions and receive answers grounded in multi-stage retrieved context with verifiable source citations.
 
 ## Live Demo
 
@@ -25,21 +25,25 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 
 ## Technical Features
 
-- **Hybrid RAG Pipeline**: Combines dense semantic retrieval (MultiQuery + MMR) with lexical BM25 search, fused via weighted Reciprocal Rank Fusion (RRF).
-- **Advanced Reranking**: Utilizes Cross-Encoder models to re-evaluate top candidates, ensuring the most relevant context is provided to the LLM.
+- **Hybrid Search**: Combines dense semantic retrieval (MMR) with lexical BM25 search, fused via weighted Reciprocal Rank Fusion (RRF).
+- **RAG Fusion**: Implements Multi-Query generation to capture diverse user intents and improve retrieval coverage.
+- **Advanced Reranking**: Utilizes Cross-Encoder models (`ms-marco-MultiBERT-L-12`) via FlashRank to re-evaluate top candidates, ensuring the most relevant context is provided to the LLM.
+- **Chain-of-Thought (CoT) Reasoning**: Implements a 4-step structured reasoning protocol (Query Deconstruction, Filtering, Synthesis, Strategy) to ensure grounded and logical answers.
 - **Async Job Orchestration**: Background indexing and query execution with real-time status polling for a smooth user experience.
 - **Deep Analytics Dashboard**: Built-in metrics tracking for retrieval accuracy (nDCG, HitRate), latency, and API usage.
+- **Minimalist UI/UX**: Centered branding with 'Outfit' typography, glassmorphism aesthetics, and a streamlined Knowledge Base management interface.
 - **Cloud-Ready Architecture**: Ships with an all-in-one Docker configuration optimized for Hugging Face Spaces and Azure Container Apps.
-- **Flexible UI**: Premium Streamlit interface featuring a custom design system, glassmorphism aesthetics, and interactive chat history.
 
 ## Technology Stack
 
 ### Backend
 - **Framework**: FastAPI
 - **RAG Engine**: LangChain
-- **Models**: Google Groq (Llama 3.1) 3.1 Flash Lite Preview, all-MiniLM-L6-v2 (Local Embedding)
-- **Reranker**: Cross-Encoder (MS-MARCO MiniLM)
-- **Search**: BM25 (Lexical) + Qdrant (Dense)
+- **LLM**: Llama 3.3 70B & Llama 3.1 8B (Groq Cloud)
+- **Reasoning**: Chain-of-Thought (CoT) structured 4-step protocol
+- **Embedding Model**: paraphrase-multilingual-MiniLM-L12-v2 (Local)
+- **Reranker**: FlashRank (ms-marco-MultiBERT-L-12 Cross-Encoder)
+- **Search**: BM25 (Lexical) + Qdrant (Dense) + RAG Fusion (Multi-Query)
 
 ### Frontend
 - **Framework**: Streamlit
@@ -65,8 +69,9 @@ graph TD
         Split -->|Dense| QDR[Qdrant Vector DB]
         Split -->|Lexical| BM25[BM25 Index]
         
-        API -->|Query| RAG[Hybrid Retriever]
-        RAG -->|RRF Fusion| Fuse[Candidate Fusion]
+        API -->|Query Rewriting| Rewriter[Query Rewriter]
+        Rewriter -->|Multi-Query| RAG[Hybrid Retriever]
+        RAG -->|RRF Fusion| Fuse[RAG Fusion]
         Fuse -->|Reranking| Rerank[Cross-Encoder]
         Rerank -->|Context| LLM[Groq (Llama 3.1) LLM]
     end
@@ -89,9 +94,9 @@ InvenioAI is optimized for speed and retrieval precision while maintaining low o
 | Parameter | Value | Description |
 | :--- | :--- | :--- |
 | **Retrieval Mode** | **Hybrid** | Dense (MMR) + Lexical (BM25) |
-| **Fusion Limit** | **Top 20** | Candidates kept after RRF fusion |
-| **QA Latency** | **~10-15s** | Average end-to-end response time |
-| **Indexing Speed** | **~32 chunks/batch** | Optimized for memory-constrained runtimes |
+| **Rerank Top-K** | **5 Docs** | Optimized context window for LLM |
+| **Avg. Response** | **~34s** | Total end-to-end latency (RAG Fusion + Reranking) |
+| **Avg. Retrieval** | **~12s** | Multi-query hybrid search & RRF fusion time |
 
 ---
 

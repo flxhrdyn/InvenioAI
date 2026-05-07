@@ -121,9 +121,9 @@ HYBRID_LEXICAL_WEIGHT = _env_float("INVENIOAI_HYBRID_LEXICAL_WEIGHT", default=1.
 RERANK_TOP_K = 5
 
 # Models
-LLM_MODEL = _env_str("INVENIOAI_LLM_MODEL", "llama3-8b-8192")
-EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-RERANKER_MODEL = "ms-marco-MultiBERT-L-12"
+LLM_MODEL = _env_str("INVENIOAI_LLM_MODEL", "llama-3.1-8b-instant")
+EMBEDDING_MODEL = _env_str("INVENIOAI_EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+RERANKER_MODEL = _env_str("INVENIOAI_RERANKER_MODEL", "ms-marco-MultiBERT-L-12")
 
 # API Keys
 _groq_api_key = (os.getenv("GROQ_API_KEY") or "").strip()

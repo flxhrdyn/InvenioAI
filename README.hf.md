@@ -8,12 +8,21 @@ app_port: 7860
 pinned: false
 ---
 
-# InvenioAI (Docker Space)
+# 🧠 InvenioAI — Advanced RAG & Analytics
+**Production-Ready Document Intelligence with Llama 3.1, Hybrid Search, and RAG Fusion.**
 
-This Space runs InvenioAI as a single Docker container:
+InvenioAI is a high-performance Document Q&A system designed to transform static PDFs into actionable knowledge. It implements an advanced RAG architecture with a heavy focus on retrieval precision and observability.
 
-- FastAPI backend (internal): `http://127.0.0.1:8000`
-- Streamlit UI (public): `http://0.0.0.0:${PORT}` (Hugging Face usually sets `PORT=7860`)
+### 🚀 Core Capabilities
+- **Advanced RAG Architecture**: Multi-query generation (RAG Fusion), Hybrid Search (Dense + Lexical), and **FlashRank Reranking** (ms-marco-MultiBERT-L-12).
+- **Chain-of-Thought (CoT)**: Structured 4-step reasoning protocol for high-fidelity response generation.
+- **Production-Ready UX**: Premium adaptive UI with 'Outfit' typography and a dedicated **Retrieval Metrics Dashboard** (nDCG, HitRate).
+- **Fast & Scalable**: Powered by Groq (Llama 3.1) and Qdrant for sub-second inference and robust indexing.
+
+## 🛠️ Infrastructure (Hugging Face Docker)
+This Space runs as a single Docker container:
+- **FastAPI Backend**: Internal orchestration and RAG logic.
+- **Streamlit Frontend**: Public interface on port `7860`.
 
 ## Required secrets / variables (Space Settings)
 
@@ -35,4 +44,4 @@ Recommended:
 
 - This Space is optimized for a monorepo structure. For production deployments with Docker Compose, see `docker-compose.yml`.
 - First build can take a while because ML dependencies (FastEmbed) are downloaded during first run.
-- Ensure `GROQ_API_KEY` is set in Space Secrets.
+- Ensure `GROQ_API_KEY` is set in Space Secrets.
