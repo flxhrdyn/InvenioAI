@@ -43,7 +43,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from theme import COLORS
+import importlib
+import theme
+importlib.reload(theme)
+from theme import COLORS, CSS_VARS
 
 API_BASE_URL = os.getenv("INVENIOAI_API_BASE_URL", "http://localhost:8000").rstrip("/")
 
@@ -189,16 +192,93 @@ def _render_assistant_message(reply: str) -> None:
 
 # ── Design System ─────────────────────────────────────────────────────────────
 
+# Inject Google Fonts
+st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+""", unsafe_allow_html=True)
+
 st.markdown(f"""
 <style>
-/* ── Clean Minimal Defaults ── */
-.block-container {{
-    max-width: 1200px !important;
-}}
-#MainMenu, footer {{ visibility: hidden; }}
-header {{ background: transparent !important; }}
+{CSS_VARS}
 
-/* Maintain clean defaults */
+/* ── Global Typography ── */
+/* Apply font only to text-heavy elements to avoid breaking icons */
+h1, h2, h3, h4, h5, h6, p, li, button, input, textarea, [data-testid="stChatMessage"] {{
+    font-family: 'Outfit', sans-serif !important;
+}}
+
+/* ── Branding ── */
+.branding {{
+    font-weight: 700 !important;
+}}
+
+/* ── Welcome Screen Centering ── */
+.welcome-container {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 65vh; /* Adjusted to center in viewport */
+}}
+
+.welcome-title {{
+    font-weight: 700 !important;
+    font-size: 3.5rem !important;
+    margin-bottom: 0.5rem !important;
+}}
+
+.welcome-subtitle {{
+    font-size: 1.2rem !important;
+    opacity: 0.8;
+}}
+
+/* ── Container Layout ── */
+.block-container {{
+    max-width: 1100px !important;
+    padding-top: 2rem !important;
+}}
+
+/* ── UI Cleanup ── */
+footer {{ visibility: hidden; }}
+/* Keep header visible for the menu, but make it clean */
+header {{ 
+    background-color: transparent !important;
+}}
+
+/* ── Chat Message Styling (Boxed) ── */
+[data-testid="stChatMessage"] {{
+    border: 1px solid var(--invenio-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    background-color: transparent !important;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}}
+
+[data-testid="stChatMessage"]:hover {{
+    border-color: var(--invenio-accent);
+}}
+
+/* ── Expander Styling ── */
+.stExpander {{
+    border: 1px solid var(--invenio-border) !important;
+    border-radius: 8px !important;
+    background-color: var(--invenio-bg-card) !important;
+}}
+
+/* ── Status Bar Alignment ── */
+.stStatusWidget {{
+    border: 1px solid var(--invenio-border) !important;
+    border-radius: 8px !important;
+}}
+
+/* ── Button Transitions ── */
+button {{
+    transition: all 0.2s ease !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -361,8 +441,8 @@ with st.sidebar:
     st.title("InvenioAI")
     st.caption("AI · Document Intelligence")
 
-    # Upload
-    st.subheader("Upload Document")
+    # Upload Section
+    st.subheader("📤 Upload PDF")
 
     delete_after_index = (
         (os.getenv("INVENIOAI_DELETE_UPLOADED_PDFS") or os.getenv("DELETE_UPLOADED_PDFS") or "0").strip() == "1"
@@ -370,10 +450,10 @@ with st.sidebar:
     if delete_after_index:
         st.info('Uploaded PDFs will be deleted after indexing.')
 
-    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+    uploaded_file = st.file_uploader("Add documents to build your AI knowledge base", type=["pdf"])
     if uploaded_file:
         upload_status_slot = st.empty()
-        if st.button("⚡ Index Document", type="primary", use_container_width=True):
+        if st.button("⚡ Process & Index", type="primary", use_container_width=True):
             with st.spinner("Indexing document..."):
                 job_id, err = create_upload_job(uploaded_file)
                 if err or not job_id:
@@ -397,8 +477,8 @@ with st.sidebar:
 
     st.divider()
 
-    # Indexed Documents
-    st.subheader("Indexed Documents")
+    # Knowledge Base
+    st.subheader("🧠 Knowledge Base")
     indexed_files = get_indexed_files()
     if indexed_files:
         for f in indexed_files:
@@ -428,10 +508,7 @@ with st.sidebar:
     else:
         st.write("No documents yet.")
 
-    st.divider()
-
-    # Actions
-    st.subheader("Actions")
+    
     if st.button("🗑️ Delete All Documents", use_container_width=True):
         with st.spinner("Deleting..."):
             try:
@@ -460,8 +537,12 @@ if "messages" not in st.session_state:
 # Welcome screen when no messages
 if _is_chat_active():
     if not st.session_state.messages:
-        st.title("🧠 InvenioAI")
-        st.write("Ask anything about the documents you have uploaded.")
+        st.markdown("""
+            <div class="welcome-container">
+                <h1 class="welcome-title">🧠 InvenioAI</h1>
+                <p class="welcome-subtitle">Ask anything about your Knowledge Base.</p>
+            </div>
+        """, unsafe_allow_html=True)
 
     # Render history
     for i, message in enumerate(st.session_state.messages):

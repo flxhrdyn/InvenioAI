@@ -11,11 +11,14 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-# Add project root to the import path so `app.*` and `frontend.*` imports work
-# when Streamlit executes pages from this subdirectory.
+# Add frontend and root directories to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from frontend.theme import COLORS
+import importlib
+import theme
+importlib.reload(theme)
+from theme import COLORS, CSS_VARS
 
 from backend.app.metrics import (
     compute_ir_metrics,
@@ -37,14 +40,10 @@ st.session_state["invenioai_active_page"] = "dashboard"
 
 # ── Design System (mirrors main app) ─────────────────────────────────────────
 
+# Plotly charts will use the default 'streamlit' theme for best adaptivity
 PLOTLY_TEMPLATE = dict(
     layout=go.Layout(
-        paper_bgcolor=COLORS["bg_card"],
-        plot_bgcolor=COLORS["bg_secondary"],
-        font=dict(family="Inter, sans-serif", color=COLORS["text_primary"]),
-        xaxis=dict(gridcolor=COLORS["border"], linecolor=COLORS["border"]),
-        yaxis=dict(gridcolor=COLORS["border"], linecolor=COLORS["border"]),
-        legend=dict(bgcolor=COLORS["bg_card"], bordercolor=COLORS["border"]),
+        font=dict(family="Outfit, sans-serif"),
         margin=dict(l=16, r=16, t=32, b=16),
     )
 )
@@ -58,13 +57,29 @@ def _layout_kwargs(*, drop: tuple[str, ...] = ()) -> dict:
 
 # ── Design System (Clean Defaults) ─────────────────────────────────────────────
 
+# Inject Google Fonts
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+""", unsafe_allow_html=True)
+
+st.markdown(f"""
 <style>
-.block-container {
+{CSS_VARS}
+
+/* ── Global Typography ── */
+/* Apply font only to text-heavy elements to avoid breaking icons */
+h1, h2, h3, h4, h5, h6, p, li, button, input, textarea, [data-testid="stMetricValue"] {{
+    font-family: 'Outfit', sans-serif !important;
+}}
+
+.block-container {{
     max-width: 1200px !important;
-}
-#MainMenu, footer { visibility: hidden; }
-header { background: transparent !important; }
+}}
+footer {{ visibility: hidden; }}
+header {{ background: transparent !important; }}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -99,10 +114,9 @@ with st.sidebar:
                       help="Number of top documents evaluated in each @k metric.")
 
     threshold = st.slider("Relevance Threshold", min_value=0.0, max_value=1.0, value=0.01, step=0.01,
-                          help="Score ≥ threshold → relevant.")
+                          help="Score ≥ threshold → relevant. Relevance is estimated from cosine similarity scores.")
 
-    st.divider()
-    st.subheader("Actions")
+    
 
     if st.button("🔄 Refresh Data", use_container_width=True):
         st.rerun()
@@ -112,8 +126,7 @@ with st.sidebar:
         st.success("Metrics reset!")
         st.rerun()
 
-    st.divider()
-    st.info("Relevance is estimated from cosine similarity scores.")
+
 
 
 # ── Load data ─────────────────────────────────────────────────────────────────
@@ -185,26 +198,19 @@ if per_q:
         ))
 
     fig_time.update_layout(
-        paper_bgcolor=COLORS["bg_card"],
-        plot_bgcolor=COLORS["bg_secondary"],
-        font=dict(family="Inter, sans-serif", color=COLORS["text_primary"]),
+        font=dict(family="Inter, sans-serif"),
         margin=dict(l=16, r=16, t=32, b=16),
         height=280,
         xaxis=dict(
             title="Query #",
-            gridcolor=COLORS["border"],
-            linecolor=COLORS["border"],
             autorange=True,
         ),
         yaxis=dict(
             title="Time (seconds)",
-            gridcolor=COLORS["border"],
-            linecolor=COLORS["border"],
             autorange=True,
         ),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-            bgcolor=COLORS["bg_card"], bordercolor=COLORS["border"],
         ),
     )
     st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
@@ -252,8 +258,8 @@ else:
 # ── Advanced retrieval metrics (optional) ────────────────────────────────────
 with st.expander("Advanced Retrieval Metrics (optional)", expanded=False):
     st.markdown(
-        f"""
-        <div style="font-size:12px; color:{COLORS['text_secondary']}; margin-bottom:12px;">
+        """
+        <div style="font-size:12px; color:var(--text-color); opacity: 0.7; margin-bottom:12px;">
             Advanced metrics use score-threshold relevance (threshold = {threshold:.2f})
             and are best used for retrieval debugging.
         </div>

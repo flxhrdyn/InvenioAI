@@ -1,41 +1,34 @@
-"""Shared Streamlit theme tokens for InvenioAI.
-
-Single source of truth for the UI color palette used by Streamlit pages.
-"""
-
 from __future__ import annotations
 
+# We use Streamlit's native CSS variables as much as possible.
+# These tokens are for custom elements that need specific accent colors.
 COLORS: dict[str, str] = {
-    # Base backgrounds
-    "bg_primary": "#0F1117",
-    "bg_secondary": "#1A1D27",
-    "bg_card": "#1E2130",
-    "bg_sidebar": "#13151F",
-
-    # Accents
-    "accent": "#6C63FF",
-    "accent_hover": "#8B85FF",
-    "accent_light": "#6C63FF22",
-
-    # Chat bubbles (some pages reference these explicitly)
-    "user_bubble": "#6C63FF",
-    "bot_bubble": "#1E2130",
-
-    # Borders / text
-    "border": "#2A2D3E",
-    "text_primary": "#E8EAF6",
-    "text_secondary": "#8F95B2",
-    "text_muted": "#555876",
-
-    # Status
+    "accent": "var(--primary-color)",
+    "accent_hover": "var(--primary-color)",
+    "accent_light": "rgba(108, 99, 255, 0.1)",
+    "text_primary": "var(--text-color)",
+    "text_secondary": "rgba(128, 128, 128, 0.7)",
+    "text_muted": "rgba(128, 128, 128, 0.5)",
     "success": "#00C9A7",
     "error": "#FF6B6B",
     "warning": "#FFB347",
-
-    # Dashboard chart palette
+    
+    # Restoring Dashboard chart palette to prevent KeyErrors
     "chart1": "#6C63FF",
     "chart2": "#00C9A7",
     "chart3": "#FFB347",
     "chart4": "#FF6B6B",
     "chart5": "#38BDF8",
+    "bg_card": "var(--secondary-bg-color)",
+    "bg_secondary": "var(--secondary-bg-color)",
+    "border": "rgba(128, 128, 128, 0.2)",
 }
+
+# CSS Variables mapping for easier injection
+CSS_VARS = """
+:root {
+    --invenio-accent: var(--primary-color);
+    --invenio-bg-card: var(--secondary-bg-color);
+    --invenio-border: rgba(128, 128, 128, 0.2);
+}
+"""
