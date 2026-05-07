@@ -656,16 +656,6 @@ def run_streaming_query(prompt: str, history: list[str]):
                         # Collapse thoughts once we start generating heavily
                         thought_container.update(label="✅ Reasoning Complete", state="complete", expanded=False)
                         answer_placeholder.markdown(full_answer + " ▌")
-                        # 5. Auto-scroll to bottom (only when a query is active or just finished)
-                        if st.session_state.get("is_querying", False):
-                            st.markdown("""
-                                <script>
-                                const scrollTarget = window.parent.document.querySelector('.main .block-container');
-                                if (scrollTarget) {
-                                    scrollTarget.scrollTop = scrollTarget.scrollHeight;
-                                }
-                                </script>
-                            """, unsafe_allow_html=True)
                     elif step == "done":
                         full_answer = data.get("answer", full_answer)
                         sources = data.get("sources", [])
@@ -717,12 +707,32 @@ if prompt := st.chat_input("Ask something about your documents..."):
                 "thoughts": thoughts
             })
             save_persistent_history(st.session_state.messages)
-            st.markdown("""
-                <script>
-                const scrollTarget = window.parent.document.querySelector('.main .block-container');
-                if (scrollTarget) {
-                    scrollTarget.scrollTop = scrollTarget.scrollHeight;
-                }
-                </script>
-            """, unsafe_allow_html=True)
             st.rerun()
+
+    # 5. Robust Auto-scroll (Observes height changes like expanders)
+    st.markdown("""
+        <script>
+        const scrollTarget = window.parent.document.querySelector('.main .block-container');
+        if (scrollTarget && !window.scrollObserverAttached) {
+            window.scrollObserverAttached = true;
+            let lastHeight = scrollTarget.scrollHeight;
+            
+            const observer = new MutationObserver(() => {
+                const newHeight = scrollTarget.scrollHeight;
+                if (newHeight > lastHeight) {
+                    // Only scroll if we are already near the bottom (tolerance 200px)
+                    const isNearBottom = (scrollTarget.scrollTop + scrollTarget.clientHeight) >= (lastHeight - 200);
+                    if (isNearBottom) {
+                        scrollTarget.scrollTo({ top: newHeight, behavior: 'smooth' });
+                    }
+                    lastHeight = newHeight;
+                }
+            });
+            
+            observer.observe(scrollTarget, { childList: true, subtree: true });
+            
+            // Initial scroll for this render
+            scrollTarget.scrollTo({ top: scrollTarget.scrollHeight, behavior: 'smooth' });
+        }
+        </script>
+    """, unsafe_allow_html=True)
