@@ -20,14 +20,13 @@ Melakukan perombakan menyeluruh (Overhaul) pada sisi Frontend dan Metric Logging
 
 ## Implementation Decisions
 
-### 1. Frontend: Premium UI/UX & State Management
-- **Instant Messaging Feedback**: Merender pesan pengguna ke UI secara asinkron sebelum melakukan panggilan API ke backend untuk menghilangkan efek "Opaque/Running" yang mengganggu.
+### 1. Frontend: Hybrid Minimalist UI & Transparency
+- **Hybrid Minimalist Layout**: Menggunakan komponen `st.chat_message` asli untuk reliabilitas, namun dipoles dengan CSS premium (Inter/Outfit fonts) dan layout yang lebih luas (airy).
+- **Transparent Thinking Process**: Implementasi `st.status` untuk menampilkan langkah-langkah logika AI (*Rewriting, Retrieving, Reranking, Generating*) secara transparan dan permanen (collapsible).
+- **Professional Citations**: Menggunakan `st.expander` yang distyling premium untuk menampilkan sumber referensi secara terstruktur di bawah jawaban.
+- **Native Theme Integration**: Memindahkan konfigurasi warna ke `.streamlit/config.toml` agar sinkron secara native dengan sistem Streamlit.
 - **Persistent Sidebar Library**: Menyimpan daftar dokumen terindeks ke dalam `st.session_state` dan melakukan sinkronisasi otomatis agar data tidak hilang saat navigasi halaman.
 - **Individual Deletion UI**: Menambahkan kontrol (ikon trash) pada setiap item dokumen di sidebar untuk penghapusan granular.
-- **Slim Chat Input**: Mengurangi padding vertikal dan mengatur `textarea` agar tipis (sleek) saat kosong. Menggunakan desain *floating* dengan *shadow* yang halus.
-- **Modern Message Bubbles**: Mengganti ikon kotak kaku dengan avatar bulat dan tipografi yang lebih bersih (Inter/Roboto).
-- **Source Pills Component**: Mengimplementasikan barisan tombol kecil (`Hal. X`) di bawah jawaban AI.
-- **Interactive Citations**: Menggunakan metadata `page_number` untuk memetakan sitasi ke potongan teks asli (menggunakan *expander* atau *popover*).
 
 ### 2. Backend: Performance & Reliability Metrics
 - **Granular Document Deletion**: Membuat endpoint untuk menghapus poin spesifik di Qdrant berdasarkan metadata `source_file`.

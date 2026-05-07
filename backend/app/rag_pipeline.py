@@ -216,18 +216,19 @@ def _run_rag_pipeline_with_query(standalone_query: str, original_question: str, 
         client=client,
     )
 
-    reranked_docs = rerank(standalone_query, retrieved_docs)
+    reranked_docs, retrieval_scores = rerank(standalone_query, retrieved_docs)
     retrieval_time = time.monotonic() - retrieval_start
 
     # Per-document similarity scores for the dashboard.
-    try:
-        scored = vectorstore.similarity_search_with_relevance_scores(
-            standalone_query, k=RETRIEVAL_K
-        )
-        retrieval_scores = [round(float(score), 4) for _, score in scored]
-    except Exception:
-        logger.debug("Failed to fetch relevance scores", exc_info=True)
-        retrieval_scores = []
+    if not retrieval_scores:
+        try:
+            scored = vectorstore.similarity_search_with_relevance_scores(
+                standalone_query, k=RETRIEVAL_K
+            )
+            retrieval_scores = [round(float(score), 4) for _, score in scored]
+        except Exception:
+            logger.debug("Failed to fetch relevance scores", exc_info=True)
+            retrieval_scores = []
 
     context, sources_str, sources_json = format_docs(reranked_docs)
     prompt = RAG_PROMPT.format(context=context, question=original_question, sources=sources_str)
@@ -326,30 +327,32 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         cached_deep = cache.get(deep_key)
         if cached_deep:
             logger.info(f"RAG Stream Deep Cache Hit: {standalone_query[:50]}...")
-            # Log to metrics
+            answer = cached_deep.get("answer", "")
+            sources = cached_deep.get("sources", [])
+            m = cached_deep.get("metrics", {})
+            
+            yield json.dumps({
+                "step": "done",
+                "answer": answer,
+                "sources": sources,
+                "metrics": m
+            }) + "\n"
+            
+            # Log metrics even for cache hits
             try:
                 from .metrics import log_query
                 log_query(
                     question=query,
                     response_time=time.monotonic() - total_start,
-                    answer_length=len(cached_deep.get("answer", "")),
-                    retrieval_time=0,
-                    generation_time=0,
-                    docs_retrieved=cached_deep.get("metrics", {}).get("docs_retrieved", 0),
-                    chunks_processed=cached_deep.get("metrics", {}).get("chunks_processed", 0),
-                    retrieval_scores=cached_deep.get("metrics", {}).get("retrieval_scores", []),
+                    answer_length=len(answer),
+                    retrieval_time=m.get("retrieval_time", 0),
+                    generation_time=m.get("generation_time", 0),
+                    docs_retrieved=len(sources) if isinstance(sources, list) else 0,
+                    chunks_processed=m.get("reranked_docs", 0),
+                    retrieval_scores=m.get("retrieval_scores", []),
                 )
             except Exception:
-                logger.warning("Failed to log deep cached stream metrics", exc_info=True)
-            # Populate Quick Cache
-            cache.set(quick_key, cached_deep, ttl=3600)
-            yield json.dumps({"step": "cached", "answer": cached_deep["answer"]}) + "\n"
-            yield json.dumps({
-                "step": "done",
-                "answer": cached_deep["answer"],
-                "sources": cached_deep["sources"],
-                "metrics": cached_deep.get("metrics", {})
-            }) + "\n"
+                pass
             return
 
         # Step 2: Retrieval
@@ -404,7 +407,8 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
 
         # Step 3: Reranking
         yield json.dumps({"step": "reranking"}) + "\n"
-        top_docs = rerank(standalone_query, docs)
+        top_docs, retrieval_scores = rerank(standalone_query, docs)
+        metadata["retrieval_scores"] = retrieval_scores
         metadata["reranked_docs"] = len(top_docs)
 
         # Step 4: LLM Answer Generation (Streaming)

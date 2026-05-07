@@ -8,7 +8,7 @@ order instead of failing the whole request.
 from __future__ import annotations
 
 import logging
-from typing import Any, List
+from typing import Any, List, Tuple
 
 # Import config FIRST so Hugging Face Hub env defaults (timeouts/offline) are set
 # before importing the HF stack.
@@ -30,7 +30,7 @@ def _get_ranker() -> Ranker:
     return _ranker
 
 
-def rerank(query: str, docs: List[Any]) -> List[Any]:
+def rerank(query: str, docs: List[Any]) -> Tuple[List[Any], List[float]]:
     """Return documents ordered by cross-encoder relevance.
 
     Args:
@@ -38,12 +38,11 @@ def rerank(query: str, docs: List[Any]) -> List[Any]:
         docs: Retrieved documents (LangChain `Document`-like objects).
 
     Returns:
-        Up to `RERANK_TOP_K` documents. If reranking fails, returns the first
-        `RERANK_TOP_K` documents in their original order.
+        Tuple of (ranked_docs, scores). Up to `RERANK_TOP_K` items.
     """
 
     if not docs:
-        return []
+        return [], []
 
     try:
         # Convert LangChain documents to FlashRank format
@@ -56,15 +55,17 @@ def rerank(query: str, docs: List[Any]) -> List[Any]:
         results = _get_ranker().rerank(rerank_request)
         
         # FlashRank results are already sorted by score
-        # We need to map them back to the original document objects
         ranked_docs = []
+        scores = []
         for res in results[:RERANK_TOP_K]:
             doc_id = res["id"]
             ranked_docs.append(docs[doc_id])
+            scores.append(round(float(res.get("score", 0.0)), 4))
             
-        return ranked_docs
+        return ranked_docs, scores
         
     except Exception as exc:
-        # Reranking is an optimization; treat failures as non-fatal.
         logger.warning("Reranker unavailable; skipping rerank (%s)", exc)
-        return docs[:RERANK_TOP_K]
+        # Fallback: original order, zero scores
+        top_docs = docs[:RERANK_TOP_K]
+        return top_docs, [0.0] * len(top_docs)

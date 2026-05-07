@@ -191,464 +191,14 @@ def _render_assistant_message(reply: str) -> None:
 
 st.markdown(f"""
 <style>
-/* ── Global reset ── */
-html, body, [class*="css"] {{
-    font-family: 'Inter', sans-serif;
-    background-color: {COLORS['bg_primary']};
-    color: {COLORS['text_primary']};
-}}
-
-/* ── Center main content area in wide layout ── */
+/* ── Clean Minimal Defaults ── */
 .block-container {{
     max-width: 1200px !important;
-    margin: 0 auto !important;
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
 }}
+#MainMenu, footer {{ visibility: hidden; }}
+header {{ background: transparent !important; }}
 
-/* ── App background ── */
-.stApp {{
-    background-color: {COLORS['bg_primary']};
-}}
-
-/* ── Hide Streamlit default header/footer ── */
-#MainMenu, footer, header {{ visibility: hidden; }}
-
-/* ── Sidebar ── */
-[data-testid="stSidebar"] {{
-    background-color: {COLORS['bg_sidebar']};
-    border-right: 1px solid {COLORS['border']};
-}}
-[data-testid="stSidebar"] * {{
-    color: {COLORS['text_primary']};
-}}
-
-/* ── Sidebar header branding ── */
-.brand-header {{
-    padding: 16px 0;
-    border-bottom: 1px solid {COLORS['border']};
-    margin-bottom: 20px;
-}}
-.brand-title {{
-    font-size: 22px;
-    font-weight: 700;
-    color: {COLORS['text_primary']};
-    letter-spacing: -0.3px;
-}}
-.brand-title span {{
-    color: {COLORS['accent']};
-}}
-.brand-subtitle {{
-    font-size: 11px;
-    font-weight: 400;
-    color: {COLORS['text_muted']};
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    margin-top: 4px;
-}}
-
-/* ── Section labels ── */
-.section-label {{
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: {COLORS['text_muted']};
-    margin-bottom: 12px;
-    margin-top: 8px;
-}}
-
-/* ── Simple Doc Pill ── */
-.doc-pill {{
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: {COLORS['bg_card']};
-    border: 1px solid {COLORS['border']};
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: {COLORS['text_primary']};
-    width: 100%;
-    margin-bottom: 4px;
-}}
-.doc-pill-icon {{
-    color: {COLORS['accent']};
-    flex-shrink: 0;
-}}
-.doc-pill-text {{
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}}
-.delete-btn-container {{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}}
-
-/* ── Empty state ── */
-.empty-state {{
-    text-align: center;
-    padding: 20px;
-    background: {COLORS['bg_card']};
-    border: 1px dashed {COLORS['border']};
-    border-radius: 10px;
-    color: {COLORS['text_muted']};
-    font-size: 13px;
-}}
-
-/* ── Metric cards ── */
-.metric-card {{
-    background: {COLORS['bg_card']};
-    border: 1px solid {COLORS['border']};
-    border-radius: 10px;
-    padding: 16px;
-    text-align: center;
-    margin-bottom: 8px;
-}}
-.metric-value {{
-    font-size: 22px;
-    font-weight: 700;
-    color: {COLORS['accent']};
-    line-height: 1.2;
-}}
-.metric-label {{
-    font-size: 11px;
-    color: {COLORS['text_muted']};
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}}
-
-/* ── Buttons ── */
-.stButton > button {{
-    background: {COLORS['accent']};
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 8px 16px;
-    transition: background 0.2s ease;
-    width: 100%;
-}}
-.stButton > button:hover {{
-    background: {COLORS['accent_hover']};
-    color: #ffffff;
-    border: none;
-}}
-.stButton > button[kind="secondary"] {{
-    background: {COLORS['bg_card']};
-    color: {COLORS['text_secondary']};
-    border: 1px solid {COLORS['border']};
-}}
-.stButton > button[kind="secondary"]:hover {{
-    background: {COLORS['border']};
-    color: {COLORS['text_primary']};
-}}
-
-/* ── Minimalist Delete Link ── */
-.delete-action-row {{
-    display: flex;
-    justify-content: flex-end;
-    margin-top: -8px;
-    margin-bottom: 12px;
-}}
-.small-delete-btn button {{
-    background: transparent !important;
-    color: {COLORS['text_muted']} !important;
-    border: none !important;
-    font-size: 11px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    height: auto !important;
-    text-decoration: none !important;
-}}
-.small-delete-btn button:hover {{
-    color: #ff4b4b !important;
-    text-decoration: underline !important;
-    background: transparent !important;
-}}
-
-/* ── File uploader ── */
-[data-testid="stFileUploader"] {{
-    background: {COLORS['bg_card']};
-    border: 1.5px dashed {COLORS['border']};
-    border-radius: 10px;
-    padding: 10px;
-}}
-[data-testid="stFileUploader"] label {{
-    color: {COLORS['text_secondary']} !important;
-    font-size: 13px;
-}}
-
-/* ── Aggressive Wide Layout Fix ── */
-.block-container {{
-    max-width: 1200px !important;
-    width: 100% !important;
-    margin: 0 auto !important;
-}}
-
-/* ── Chat input (Force Wide Rectangular) ── */
-[data-testid="stChatInput"] {{
-    background-color: transparent !important;
-    padding: 24px 20px 40px !important;
-    width: 100% !important;
-}}
-[data-testid="stChatInput"] > div {{
-    width: 100% !important;
-    max-width: 1200px !important;
-    margin: 0 auto !important;
-}}
-[data-testid="stChatInput"] form {{
-    background: {COLORS['bg_card']} !important;
-    border: 1px solid {COLORS['border']} !important;
-    border-radius: 16px !important; 
-    padding: 8px 20px !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-}}
-[data-testid="stChatInput"] textarea {{
-    background-color: transparent !important;
-    border: none !important;
-    color: {COLORS['text_primary']} !important;
-    font-size: 15px !important;
-    font-family: 'Inter', sans-serif !important;
-    padding: 12px 0 !important;
-    box-shadow: none !important;
-    line-height: 1.5 !important;
-    flex-grow: 1 !important;
-}}
-[data-testid="stChatInput"] button {{
-    background: {COLORS['accent']} !important;
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    border-radius: 10px !important;
-    border: none !important;
-    margin-left: 12px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
-}}
-
-/* ── Chat message base ── */
-[data-testid="stChatMessage"] {{
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin-bottom: 24px !important;
-    align-items: flex-start;
-}}
-
-/* Hide Streamlit's default empty username/name labels inside chat contents */
-[data-testid="stChatMessageContent"] > div:first-child:not(:has(div)) {{
-    display: none !important;
-}}
-
-/* ── Chat messages — user (right) ── */
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {{
-    flex-direction: row-reverse !important;
-    align-items: flex-start !important;
-    gap: 16px !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {{
-    background: {COLORS['accent']} !important;
-    border-radius: 20px 4px 20px 20px !important;
-    padding: 10px 18px !important;
-    width: fit-content !important;
-    max-width: min(820px, 80%) !important;
-    margin-top: 2px !important;
-    margin-left: auto !important;
-    margin-right: 0 !important;
-    border: none !important;
-    box-shadow: 0 4px 20px rgba(108,99,255,0.35) !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] *,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] > div,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] > div > div,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] .stMarkdown,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] [data-testid="stMarkdownContainer"] {{
-    margin: 0 !important;
-    padding: 0 !important;
-    margin-block-start: 0 !important;
-    margin-block-end: 0 !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] p,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] li,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] span {{
-    color: rgba(255,255,255,0.95) !important;
-    font-size: 14px !important;
-    line-height: 1.6 !important;
-    margin: 0 !important;
-    margin-block-start: 0 !important;
-    margin-block-end: 0 !important;
-    word-break: break-word;
-}}
-
-/* ── Chat messages — assistant (left) ── */
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {{
-    align-items: flex-start !important;
-    gap: 16px !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {{
-    background: {COLORS['bg_card']} !important;
-    border-radius: 4px 20px 20px 20px !important;
-    padding: 10px 18px !important;
-    width: fit-content !important;
-    max-width: min(1000px, 90%) !important;
-    margin-top: 2px !important;
-    margin-left: 0 !important;
-    margin-right: auto !important;
-    border: 1px solid {COLORS['border']} !important;
-    border-left: 3px solid {COLORS['accent']} !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.25) !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] *,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] > div,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] > div > div,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] .stMarkdown,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] [data-testid="stMarkdownContainer"] {{
-    margin: 0 !important;
-    padding: 0 !important;
-    margin-block-start: 0 !important;
-    margin-block-end: 0 !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] p,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] li {{
-    color: {COLORS['text_primary']} !important;
-    font-size: 14px !important;
-    line-height: 1.6 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    margin-block-start: 0 !important;
-    margin-block-end: 0 !important;
-    word-break: break-word;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] p + p,
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] li + li {{
-    margin-top: 6px !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] strong {{
-    color: {COLORS['text_primary']} !important;
-    font-weight: 600;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] code {{
-    background: {COLORS['bg_secondary']} !important;
-    color: {COLORS['accent']} !important;
-    padding: 2px 6px !important;
-    border-radius: 4px !important;
-    font-size: 13px !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] hr {{
-    border-color: {COLORS['border']} !important;
-    margin: 10px 0 !important;
-}}
-
-/* ── Avatar icons ── */
-[data-testid="chatAvatarIcon-user"] {{
-    background: {COLORS['accent']} !important;
-    border: none !important;
-    flex-shrink: 0;
-    margin: 0 !important;
-}}
-[data-testid="chatAvatarIcon-assistant"] {{
-    background: {COLORS['accent']} !important;
-    border: none !important;
-    flex-shrink: 0;
-    margin: 0 !important;
-}}
-
-/* ── Welcome screen ── */
-.welcome-container {{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 24px;
-    text-align: center;
-}}
-.welcome-icon {{
-    font-size: 52px;
-    margin-bottom: 16px;
-    filter: drop-shadow(0 0 20px rgba(108,99,255,0.5));
-}}
-.welcome-title {{
-    font-size: 26px;
-    font-weight: 700;
-    color: {COLORS['text_primary']};
-    margin-bottom: 12px;
-    letter-spacing: -0.5px;
-}}
-.welcome-subtitle {{
-    font-size: 15px;
-    color: {COLORS['text_secondary']};
-    max-width: 460px;
-    line-height: 1.6;
-}}
-
-/* ── Spinner ── */
-[data-testid="stSpinner"] {{
-    color: {COLORS['accent']} !important;
-}}
-
-/* ── Divider ── */
-hr {{
-    border-color: {COLORS['border']} !important;
-    margin: 16px 0 !important;
-}}
-
-/* ── Expander ── */
-[data-testid="stExpander"] {{
-    background: {COLORS['bg_card']};
-    border: 1px solid {COLORS['border']};
-    border-radius: 10px;
-}}
-[data-testid="stExpander"] summary {{
-    color: {COLORS['text_secondary']};
-    font-size: 13px;
-    font-weight: 500;
-}}
-
-/* ── Alerts ── */
-[data-testid="stAlert"] {{
-    border-radius: 10px;
-    border: none;
-    font-size: 13px;
-}}
-[data-testid="stAlert"] p {{
-    margin: 0 !important;
-}}
-[data-testid="stChatMessageContent"] [data-testid="stAlert"] {{
-    padding: 0 !important;
-    margin: 0 !important;
-    background: transparent !important;
-}}
-[data-testid="stChatMessageContent"] [data-testid="stAlert"] > div {{
-    padding: 0 !important;
-}}
-[data-testid="stChatMessageContent"] [data-testid="stAlert"] [data-testid="stMarkdownContainer"] {{
-    display:flex;
-    align-items: center;
-}}
-
-/* ── DataFrame ── */
-[data-testid="stDataFrame"] {{
-    border-radius: 8px;
-    overflow: hidden;
-}}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar {{ width: 4px; height: 4px; }}
-::-webkit-scrollbar-track {{ background: {COLORS['bg_secondary']}; }}
-::-webkit-scrollbar-thumb {{ background: {COLORS['border']}; border-radius: 4px; }}
-::-webkit-scrollbar-thumb:hover {{ background: {COLORS['accent']}; }}
+/* Maintain clean defaults */
 </style>
 """, unsafe_allow_html=True)
 
@@ -770,6 +320,9 @@ def _render_upload_job_status(
     status_slot.info(f"{label} status: {status}")
 
 
+
+
+
 def wait_for_upload_job(job_id: str, *, status_slot=None, filename: str = "") -> tuple[bool, str]:
     started = time.monotonic()
     while True:
@@ -803,94 +356,21 @@ def wait_for_upload_job(job_id: str, *, status_slot=None, filename: str = "") ->
         time.sleep(UPLOAD_JOB_POLL_INTERVAL_SECONDS)
 
 
-def run_streaming_query(prompt: str, history: list[str]):
-    """Consume the SSE stream from the backend and update the UI in real-time."""
-    
-    with st.chat_message("assistant"):
-        status_placeholder = st.empty()
-        answer_placeholder = st.empty()
-        full_answer = ""
-        sources = []
-        
-        try:
-            # Use stream=True to handle SSE
-            response = requests.post(
-                f"{API_BASE_URL}/query/stream",
-                json={"question": prompt, "history": history},
-                stream=True,
-                timeout=(5, 60) # 5s to connect, 60s for the whole stream
-            )
-            response.raise_for_status()
-            
-            for line in response.iter_lines():
-                if not line:
-                    continue
-                
-                line_str = line.decode("utf-8")
-                if not line_str.startswith("data: "):
-                    continue
-                
-                try:
-                    data = json.loads(line_str[6:])
-                    step = data.get("step")
-                    
-                    if step == "rewriting":
-                        status_placeholder.markdown("🔍 *Rewriting query for context...*")
-                    elif step == "retrieving":
-                        status_placeholder.markdown("🛰️ *Searching document library...*")
-                    elif step == "reranking":
-                        status_placeholder.markdown("🎯 *Ranking relevant chunks...*")
-                    elif step == "generating":
-                        status_placeholder.markdown("🧠 *Synthesizing answer...*")
-                    elif step == "token":
-                        content = data.get("content", "")
-                        full_answer += content
-                        # Remove status once we start getting tokens
-                        status_placeholder.empty()
-                        answer_placeholder.markdown(full_answer + " ▌")
-                    elif step == "done":
-                        full_answer = data.get("answer", full_answer)
-                        sources = data.get("sources", [])
-                        answer_placeholder.markdown(full_answer)
-                        status_placeholder.empty()
-                    elif step == "error":
-                        error_msg = data.get("message", "Unknown backend error")
-                        st.error(f"❌ **Pipeline Error:** {error_msg}")
-                        return None, []
-                except json.JSONDecodeError:
-                    continue
-            
-            return full_answer, sources
-
-        except Exception as e:
-            st.error(f"❌ **Connection Error:** {e}")
-            return None, []
-
-
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div class="brand-header">
-        <div class="brand-title">Invenio<span>AI</span></div>
-        <div class="brand-subtitle">AI · Document Intelligence</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("InvenioAI")
+    st.caption("AI · Document Intelligence")
 
     # Upload
-    st.markdown('<div class="section-label">Upload Document</div>', unsafe_allow_html=True)
+    st.subheader("Upload Document")
 
     delete_after_index = (
         (os.getenv("INVENIOAI_DELETE_UPLOADED_PDFS") or os.getenv("DELETE_UPLOADED_PDFS") or "0").strip() == "1"
     )
     if delete_after_index:
-        st.markdown(
-            f'<div style="font-size:12px;color:{COLORS["text_muted"]};margin-top:-6px;margin-bottom:10px;">'
-            'ℹ️ Uploaded PDFs will be deleted after indexing.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+        st.info('Uploaded PDFs will be deleted after indexing.')
 
-    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
     if uploaded_file:
         upload_status_slot = st.empty()
         if st.button("⚡ Index Document", type="primary", use_container_width=True):
@@ -915,28 +395,18 @@ with st.sidebar:
                         else:
                             st.error(message)
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.divider()
 
-    # Indexed docs
-    st.markdown('<div class="section-label">Indexed Documents</div>', unsafe_allow_html=True)
-    indexed = get_indexed_files()
-    if indexed:
-        for f in indexed:
-            name = f[:-4] if f.endswith(".pdf") else f
-            # Document name pill
-            st.markdown(
-                f'''<div class="doc-pill">
-                <span class="doc-pill-icon">📄</span>
-                <span class="doc-pill-text" title="{f}">{name}</span>
-                </div>''',
-                unsafe_allow_html=True,
-            )
-            
-            # Delete action below, aligned to the right
-            cols = st.columns([0.6, 0.4])
-            with cols[1]:
-                st.markdown('<div class="small-delete-btn">', unsafe_allow_html=True)
-                if st.button(f"🗑️ Delete", key=f"del_{f}"):
+    # Indexed Documents
+    st.subheader("Indexed Documents")
+    indexed_files = get_indexed_files()
+    if indexed_files:
+        for f in indexed_files:
+            col1, col2 = st.columns([0.8, 0.2])
+            with col1:
+                st.write(f"📄 {f}")
+            with col2:
+                if st.button("🗑️", key=f"del_{f}"):
                     try:
                         resp = requests.delete(
                             f"{API_BASE_URL}/documents/delete", 
@@ -948,41 +418,29 @@ with st.sidebar:
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed: {e}")
-                st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.markdown(
-            '<div class="empty-state">📭 No documents yet.<br>Upload a PDF to get started.</div>',
-            unsafe_allow_html=True,
-        )
+        st.write("No documents yet.")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.divider()
 
     # Actions
-    st.markdown('<div class="section-label">Actions</div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🗑️ Delete Docs", use_container_width=True):
-            with st.spinner("Deleting..."):
-                try:
-                    resp = requests.delete(f"{API_BASE_URL}/documents", timeout=60)
-                    resp.raise_for_status()
-                    st.session_state.messages = []
-                    clear_persistent_history()
-                    _fetch_indexed_documents.clear()
-                    st.rerun()
-                except requests.exceptions.ConnectionError:
-                    st.error("❌ Could not connect.")
-                except requests.exceptions.Timeout:
-                    st.error("⏱️ Delete timed out. Please try again.")
-                except requests.exceptions.HTTPError as exc:
-                    st.error(f"❌ {exc.response.text if exc.response else str(exc)}")
-                except requests.exceptions.RequestException as exc:
-                    st.error(f"❌ Delete failed: {exc}")
-    with col2:
-        if st.button("💬 Clear Chat", use_container_width=True):
-            st.session_state.messages = []
-            clear_persistent_history()
-            st.rerun()
+    st.subheader("Actions")
+    if st.button("🗑️ Delete All Documents", use_container_width=True):
+        with st.spinner("Deleting..."):
+            try:
+                resp = requests.delete(f"{API_BASE_URL}/documents", timeout=60)
+                resp.raise_for_status()
+                st.session_state.messages = []
+                clear_persistent_history()
+                _fetch_indexed_documents.clear()
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Failed: {e}")
+    
+    if st.button("💬 Clear Chat History", use_container_width=True):
+        st.session_state.messages = []
+        clear_persistent_history()
+        st.rerun()
 
     st.markdown("<hr>", unsafe_allow_html=True)
     
@@ -995,86 +453,54 @@ if "messages" not in st.session_state:
 # Welcome screen when no messages
 if _is_chat_active():
     if not st.session_state.messages:
-        st.markdown("""
-        <div class="welcome-container">
-            <div class="welcome-icon">🧠</div>
-            <div class="welcome-title">InvenioAI</div>
-            <div class="welcome-subtitle">
-                Ask anything about the documents you have uploaded.
-                The AI will find answers directly from your document sources.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.title("🧠 InvenioAI")
+        st.write("Ask anything about the documents you have uploaded.")
 
     # Render history
     for i, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
+            # Display Thinking Process (if any)
+            thoughts = message.get("thoughts")
+            if thoughts:
+                with st.status("🧠 Thinking Process", expanded=False):
+                    for t in thoughts:
+                        st.write(t)
+            
             st.markdown(message["content"])
         
-        # Interactive Source Pills for assistant messages
-        sources = message.get("sources")
-        if sources and isinstance(sources, list):
-            st.markdown('<div style="margin-top: 16px; margin-bottom: 12px;"></div>', unsafe_allow_html=True)
-            
-            # Group sources by filename to avoid overwhelming redundancy
-            from collections import defaultdict
-            grouped = defaultdict(list)
-            for s in sources:
-                # Store snippet with its page info
-                grouped[s['file']].append({
-                    "text": s.get('text', ''),
-                    "page": s.get('page')
-                })
-            
-            # Create a clean single expander for all sources using native HTML <details> for jitter-free UI
-            source_items = list(grouped.items())
-            if source_items:
-                src_html = ""
-                for filename, snippets in source_items:
-                    src_html += f'<div style="font-size: 13px; font-weight: 600; color: {COLORS["accent"]}; margin-bottom: 8px; margin-top: 12px;">📄 {filename}</div>'
-                    for item in snippets:
-                        text = item["text"]
-                        page = item["page"]
-                        page_label = f'<span style="font-size: 10px; background: {COLORS["bg_secondary"]}; padding: 2px 6px; border-radius: 4px; margin-bottom: 4px; display: inline-block;">Page {page}</span>' if page else ""
-                        
-                        # Truncate very long snippets to keep UI snappy
-                        safe_text = (text[:800] + "...") if len(text) > 850 else text
-                        src_html += f'''
-                        <div style="margin-bottom: 12px; padding-left: 12px; border-left: 2px solid {COLORS["border"]};">
-                            {page_label}
-                            <div style="font-size: 12px; line-height: 1.5; color: #bbb;">{safe_text}</div>
-                        </div>'''
+            # Interactive Sources for assistant messages
+            sources = message.get("sources")
+            if sources and isinstance(sources, list):
+                # Group sources by filename
+                from collections import defaultdict
+                grouped = defaultdict(list)
+                for s in sources:
+                    grouped[s['file']].append({
+                        "text": s.get('text', ''),
+                        "page": s.get('page')
+                    })
                 
-                # Using native HTML <details> avoids Streamlit's layout engine jumping during interaction
-                st.markdown(f'''
-                <details class="source-details" style="border: 1px solid {COLORS["border"]}; border-radius: 8px; background: {COLORS["bg_card"]}; transition: all 0.2s ease; width: 100%; margin-bottom: 32px; margin-top: 8px;">
-                    <summary style="padding: 10px 14px; color: {COLORS["text_secondary"]}; font-size: 13px; font-weight: 500; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 14px;">📚</span> {len(source_items)} Sources
-                        </div>
-                        <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s ease;">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </summary>
-                    <div style="padding: 0 14px 14px; max-height: 350px; overflow-y: auto; border-top: 1px solid {COLORS["border"]};">
-                        {src_html}
-                    </div>
-                </details>
-                <style>
-                    .source-details summary::-webkit-details-marker {{ display: none; }}
-                    .source-details[open] {{ border-color: {COLORS["accent"]}; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }}
-                    .source-details[open] .chevron {{ transform: rotate(180deg); }}
-                </style>
-                ''', unsafe_allow_html=True)
+                source_items = list(grouped.items())
+                if source_items:
+                    with st.expander(f"📚 {len(source_items)} Sources", expanded=False):
+                        for filename, snippets in source_items:
+                            st.markdown(f"**📄 {filename}**")
+                            for item in snippets:
+                                text = item["text"]
+                                page = item["page"]
+                                if page:
+                                    st.caption(f"Page {page}")
+                                st.markdown(f"> {text}")
 
 def run_streaming_query(prompt: str, history: list[str]):
     """Consume the SSE stream from the backend and update the UI in real-time."""
     
     with st.chat_message("assistant"):
-        status_placeholder = st.empty()
+        thought_container = st.status("🧠 Thinking...", expanded=True)
         answer_placeholder = st.empty()
         full_answer = ""
         sources = []
+        thoughts = []
         
         try:
             # Use stream=True to handle SSE
@@ -1099,36 +525,47 @@ def run_streaming_query(prompt: str, history: list[str]):
                     step = data.get("step")
                     
                     if step == "rewriting":
-                        status_placeholder.markdown("🔍 *Rewriting query for context...*")
+                        msg = "🔍 Rewriting query for context..."
+                        thought_container.write(msg)
+                        thoughts.append(msg)
                     elif step == "retrieving":
-                        status_placeholder.markdown("🛰️ *Searching document library...*")
+                        msg = "🛰️ Searching document library..."
+                        thought_container.write(msg)
+                        thoughts.append(msg)
                     elif step == "reranking":
-                        status_placeholder.markdown("🎯 *Ranking relevant chunks...*")
+                        msg = "🎯 Ranking relevant chunks..."
+                        thought_container.write(msg)
+                        thoughts.append(msg)
                     elif step == "generating":
-                        status_placeholder.markdown("🧠 *Synthesizing answer...*")
+                        msg = "🧠 Synthesizing answer..."
+                        thought_container.write(msg)
+                        thoughts.append(msg)
                     elif step == "token":
                         content = data.get("content", "")
                         full_answer += content
-                        # Remove status once we start getting tokens
-                        status_placeholder.empty()
+                        # Collapse thoughts once we start generating heavily
+                        if len(full_answer) > 50:
+                            thought_container.update(label="✅ Thought Process Completed", state="complete", expanded=False)
                         answer_placeholder.markdown(full_answer + " ▌")
                     elif step == "done":
                         full_answer = data.get("answer", full_answer)
                         sources = data.get("sources", [])
                         answer_placeholder.markdown(full_answer)
-                        status_placeholder.empty()
+                        thought_container.update(label="✅ Thought Process Completed", state="complete", expanded=False)
                     elif step == "error":
                         error_msg = data.get("message", "Unknown backend error")
                         st.error(f"❌ **Pipeline Error:** {error_msg}")
-                        return None, []
+                        thought_container.update(label="❌ Error in Pipeline", state="error")
+                        return None, [], []
                 except json.JSONDecodeError:
                     continue
             
-            return full_answer, sources
+            return full_answer, sources, thoughts
 
         except Exception as e:
             st.error(f"❌ **Connection Error:** {e}")
-            return None, []
+            return None, [], []
+
 
 # Input
 if prompt := st.chat_input("Ask something about your documents..."):
@@ -1146,13 +583,14 @@ if prompt := st.chat_input("Ask something about your documents..."):
             for m in st.session_state.messages[:-1]
         ]
 
-        answer, sources = run_streaming_query(prompt, formatted_history)
+        answer, sources, thoughts = run_streaming_query(prompt, formatted_history)
         
         if answer:
             st.session_state.messages.append({
                 "role": "assistant", 
                 "content": answer,
-                "sources": sources
+                "sources": sources,
+                "thoughts": thoughts
             })
             save_persistent_history(st.session_state.messages)
             st.rerun()
