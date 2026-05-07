@@ -272,6 +272,12 @@ header {{
     border: 1px solid var(--invenio-border) !important;
     border-radius: 8px !important;
     background-color: var(--invenio-bg-card) !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+}}
+
+.stCaption {{
+    word-break: break-all !important;
 }}
 
 /* ── Status Bar Alignment ── */
@@ -561,14 +567,13 @@ if _is_chat_active():
                     if isinstance(thoughts, list):
                         st.markdown("\n".join(thoughts))
                     else:
-                        # Improved formatting using regex to avoid doubling stars and ensure clean breaks
+                        # Aggressive cleanup: remove all existing stars around Step X first
                         import re
-                        # 1. Standardize formatting for Step X:
-                        f_thoughts = re.sub(r'(?i)step\s*(\d+):', r'\n\n**Step \1:**', thoughts)
-                        # 2. Clean up any penumpukan bintang (e.g. ** **Step 1** **)
-                        f_thoughts = re.sub(r'\*+\s*\n\n\s*\*+', r'\n\n', f_thoughts)
-                        f_thoughts = re.sub(r'\*{3,}', '**', f_thoughts)
-                        st.markdown(f_thoughts.strip())
+                        clean_thoughts = re.sub(r'\*+(Step\s*\d+:)\*+', r'\1', thoughts)
+                        clean_thoughts = re.sub(r'(?i)(Step\s*\d+:)', r'\n\n**\1**', clean_thoughts)
+                        # Remove any leftover triple stars
+                        clean_thoughts = re.sub(r'\*{3,}', '**', clean_thoughts)
+                        st.markdown(clean_thoughts.strip())
             
             st.markdown(message["content"])
         
