@@ -258,18 +258,13 @@ header {{
     background-color: transparent !important;
 }}
 
-/* ── Chat Message Styling (Boxed) ── */
+/* ── Chat Message Styling ── */
 [data-testid="stChatMessage"] {{
-    border: 1px solid var(--invenio-border);
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 1rem;
-    background-color: transparent !important;
-    transition: transform 0.2s ease, border-color 0.2s ease;
-}}
-
-[data-testid="stChatMessage"]:hover {{
-    border-color: var(--invenio-accent);
+    background-color: var(--invenio-bg-secondary) !important;
+    border: 1px solid var(--invenio-border) !important;
+    border-radius: 12px !important;
+    padding: 1.25rem !important;
+    margin-bottom: 1rem !important;
 }}
 
 /* ── Expander Styling ── */
