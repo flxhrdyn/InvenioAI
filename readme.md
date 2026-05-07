@@ -95,8 +95,8 @@ InvenioAI is optimized for speed and retrieval precision while maintaining low o
 | :--- | :--- | :--- |
 | **Retrieval Mode** | **Hybrid** | Dense (MMR) + Lexical (BM25) |
 | **Rerank Top-K** | **5 Docs** | Optimized context window for LLM |
-| **Avg. Response** | **~34s** | Total end-to-end latency (RAG Fusion + Reranking) |
-| **Avg. Retrieval** | **~12s** | Multi-query hybrid search & RRF fusion time |
+| **Avg. Response** | **~15s** | Total end-to-end latency (RAG Fusion + Reranking) |
+| **Avg. Retrieval** | **~2s** | Multi-query hybrid search & RRF fusion time |
 
 ---
 
