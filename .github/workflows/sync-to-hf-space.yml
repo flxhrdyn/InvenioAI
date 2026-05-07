@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [main, master]
+    branches: [main, master, feature/advanced-rag-groq]
   workflow_dispatch:
 
 concurrency:
@@ -64,7 +64,7 @@ jobs:
 
           # Export a curated subset from the current commit.
           git archive --format=tar HEAD \
-            app frontend requirements.txt \
+            backend frontend \
             README.hf.md Dockerfile start.sh .dockerignore \
             | tar -x -C "${TMP_REPO}"
 
