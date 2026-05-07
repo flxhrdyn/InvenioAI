@@ -1,8 +1,8 @@
 ---
-title: InvenioAI
-emoji: "🧠"
+title: InvenioAI - Advanced RAG
+emoji: 🚀
 colorFrom: indigo
-colorTo: purple
+colorTo: blue
 sdk: docker
 app_port: 7860
 pinned: false

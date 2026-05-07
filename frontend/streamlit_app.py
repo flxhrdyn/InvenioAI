@@ -567,12 +567,12 @@ if _is_chat_active():
                     if isinstance(thoughts, list):
                         st.markdown("\n".join(thoughts))
                     else:
-                        # Aggressive cleanup: remove all existing stars around Step X first
+                        # Ultra-aggressive cleanup: remove all stars anywhere near Step X
                         import re
-                        clean_thoughts = re.sub(r'\*+(Step\s*\d+:)\*+', r'\1', thoughts)
+                        # 1. Remove all stars first to get raw text
+                        clean_thoughts = thoughts.replace("**", "")
+                        # 2. Format Step X: with proper bolding and spacing
                         clean_thoughts = re.sub(r'(?i)(Step\s*\d+:)', r'\n\n**\1**', clean_thoughts)
-                        # Remove any leftover triple stars
-                        clean_thoughts = re.sub(r'\*{3,}', '**', clean_thoughts)
                         st.markdown(clean_thoughts.strip())
             
             st.markdown(message["content"])
