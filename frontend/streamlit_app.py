@@ -308,6 +308,11 @@ div[data-testid="stStatusWidget"] > details > summary {{
     border-radius: 8px !important;
 }}
 
+/* ── Avatar Alignment ── */
+div[data-testid="stChatMessageAvatar"] {{
+    margin-top: 4px !important;
+}}
+
 /* ── Button Transitions ── */
 button {{
     transition: all 0.2s ease !important;
