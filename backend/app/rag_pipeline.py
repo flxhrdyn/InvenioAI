@@ -94,21 +94,24 @@ def _get_cache_key(question: str, history: Any) -> str:
     return f"rag_cache:{hashlib.md5(raw.encode()).hexdigest()}"
 
 
-def format_history(history: Any) -> str:
-    """Format chat history into a prompt-friendly string."""
+def format_history(history: Any, max_items: int = 5) -> str:
+    """Format chat history into a prompt-friendly string, limited to last N items."""
     if not history:
         return ""
 
     if isinstance(history, str):
         return history
 
-    return "\n".join(str(item) for item in history)
+    # If it's a list, take the last max_items
+    items = list(history)[-max_items:]
+    return "\n".join(str(item) for item in items)
 
 
 def rewrite_query(question: str, history: Any) -> str:
     """Rewrite a question into a standalone query."""
+    history_text = format_history(history)
     prompt = QUERY_REWRITE_PROMPT.format(
-        history=format_history(history),
+        history=history_text,
         question=question,
     )
     return _get_llm().invoke(prompt).content
@@ -116,10 +119,7 @@ def rewrite_query(question: str, history: Any) -> str:
 
 async def rewrite_query_async(query: str, history: list[str]) -> str:
     """Rewrite query to make it standalone using context asynchronously."""
-    if not history:
-        return query
-
-    history_text = "\n".join([f"- {msg}" for msg in history[-3:]])
+    history_text = format_history(history)
     prompt = QUERY_REWRITE_PROMPT.format(question=query, history=history_text)
 
     try:
