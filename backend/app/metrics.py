@@ -79,7 +79,6 @@ def save_metrics(metrics: Dict[str, Any]) -> None:
 def log_query(
     question: str, 
     response_time: float, 
-    answer: str = "",
     answer_length: int = 0,
     retrieval_time: float = 0,
     generation_time: float = 0,
@@ -87,6 +86,7 @@ def log_query(
     chunks_processed: int = 0,
     retrieval_scores: Optional[List[float]] = None,
     thoughts: str = "",
+    answer: str = "",
     standalone_query: str = "",
 ) -> None:
     """Log a query with RAG metrics."""
