@@ -296,6 +296,7 @@ def _run_rag_pipeline_with_query(standalone_query: str, original_question: str, 
             chunks_processed=len(reranked_docs),
             retrieval_scores=retrieval_scores,
             thoughts=full_thoughts,
+            standalone_query=standalone_query,
         )
     except Exception:
         logger.warning("Failed to log query metrics", exc_info=True)
@@ -332,6 +333,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
                 chunks_processed=cached.get("metrics", {}).get("chunks_processed", 0),
                 retrieval_scores=cached.get("metrics", {}).get("retrieval_scores", []),
                 thoughts=cached.get("thoughts", ""),
+                standalone_query=query,
             )
         except Exception:
             pass
@@ -364,6 +366,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
                     retrieval_time=0,
                     generation_time=0,
                     thoughts=cached_deep.get("thoughts", ""),
+                    standalone_query=standalone_query,
                 )
             except Exception:
                 pass
@@ -465,6 +468,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
                 chunks_processed=len(top_docs),
                 retrieval_scores=metadata.get("retrieval_scores", []),
                 thoughts=full_thoughts,
+                standalone_query=standalone_query,
             )
         except Exception:
             pass

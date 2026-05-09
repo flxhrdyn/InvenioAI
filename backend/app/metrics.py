@@ -79,7 +79,8 @@ def save_metrics(metrics: Dict[str, Any]) -> None:
 def log_query(
     question: str, 
     response_time: float, 
-    answer_length: int,
+    answer: str = "",
+    answer_length: int = 0,
     retrieval_time: float = 0,
     generation_time: float = 0,
     docs_retrieved: int = 0,
@@ -103,13 +104,16 @@ def log_query(
         if len(metrics["query_history"]) >= 100:
             metrics["query_history"].pop(0)
         
+        # Calculate answer length if not provided
+        final_answer_length = answer_length or len(answer)
+        
         metrics["query_history"].append({
             "timestamp": datetime.now().isoformat(),
             "question": question[:100],  # Truncate long questions
             "response_time": round(response_time, 2),
             "retrieval_time": round(retrieval_time, 2),
             "generation_time": round(generation_time, 2),
-            "answer_length": answer_length,
+            "answer_length": final_answer_length,
             "docs_retrieved": docs_retrieved,
             "chunks_processed": chunks_processed,
             "retrieval_scores": retrieval_scores or [],
