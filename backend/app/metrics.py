@@ -86,6 +86,7 @@ def log_query(
     chunks_processed: int = 0,
     retrieval_scores: Optional[List[float]] = None,
     thoughts: str = "",
+    standalone_query: str = "",
 ) -> None:
     """Log a query with RAG metrics."""
     with _metrics_lock:
@@ -113,6 +114,7 @@ def log_query(
             "chunks_processed": chunks_processed,
             "retrieval_scores": retrieval_scores or [],
             "thoughts": thoughts,
+            "standalone_query": standalone_query,
         })
         
         save_metrics(metrics)

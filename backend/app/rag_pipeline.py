@@ -108,17 +108,43 @@ def format_history(history: Any, max_items: int = 5) -> str:
 
 
 def rewrite_query(question: str, history: Any) -> str:
-    """Rewrite a question into a standalone query."""
+    """Rewrite a question into a standalone query with local caching."""
+    # Check if we have a cached standalone version for this question + simplified history
+    # For standalone questions (empty history), we can cache the result long-term
+    cache = get_cache_manager()
+    hist_str = format_history(history, max_items=1) # Just a hint
+    rewrite_cache_key = f"rewrite_cache:{hashlib.md5(f'{question}:{hist_str}'.encode()).hexdigest()}"
+    
+    cached_rewrite = cache.get(rewrite_cache_key)
+    if cached_rewrite:
+        return cached_rewrite
+
     history_text = format_history(history)
     prompt = QUERY_REWRITE_PROMPT.format(
         history=history_text,
         question=question,
     )
-    return _get_llm().invoke(prompt).content
+    res = _get_llm().invoke(prompt).content.strip()
+    
+    # Fallback
+    if len(res) < 2:
+        res = question
+        
+    # Cache the rewrite result for 1 hour
+    cache.set(rewrite_cache_key, res, ttl=3600)
+    return res
 
 
 async def rewrite_query_async(query: str, history: list[str]) -> str:
-    """Rewrite query to make it standalone using context asynchronously."""
+    """Rewrite query to make it standalone using context asynchronously with caching."""
+    cache = get_cache_manager()
+    hist_str = format_history(history, max_items=1)
+    rewrite_cache_key = f"rewrite_cache:{hashlib.md5(f'{query}:{hist_str}'.encode()).hexdigest()}"
+    
+    cached_rewrite = cache.get(rewrite_cache_key)
+    if cached_rewrite:
+        return cached_rewrite
+
     history_text = format_history(history)
     prompt = QUERY_REWRITE_PROMPT.format(question=query, history=history_text)
 
@@ -128,7 +154,9 @@ async def rewrite_query_async(query: str, history: list[str]) -> str:
         content = response.content
         if isinstance(content, str):
             rewritten = content.strip()
-            return rewritten if rewritten else query
+            res = rewritten if rewritten and len(rewritten) > 1 else query
+            cache.set(rewrite_cache_key, res, ttl=3600)
+            return res
         return query
     except Exception as e:
         logger.error(f"Query rewrite failed: {e}")
@@ -141,20 +169,22 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
     cache = get_cache_manager()
     quick_key = _get_cache_key(question, history)
     
+    logger.info(f"Checking RAG Quick Cache: key={quick_key}")
     cached = cache.get(quick_key)
     if cached:
-        logger.info(f"RAG Quick Cache Hit: {question[:50]}...")
+        logger.info(f"RAG Quick Cache HIT for: {question[:50]}")
         try:
             log_query(
                 question=question,
+                answer=cached["answer"],
                 response_time=0.01,
-                answer_length=len(cached.get("answer", "")),
                 retrieval_time=0,
                 generation_time=0,
                 docs_retrieved=cached.get("metrics", {}).get("docs_retrieved", 0),
                 chunks_processed=cached.get("metrics", {}).get("chunks_processed", 0),
                 retrieval_scores=cached.get("metrics", {}).get("retrieval_scores", []),
                 thoughts=cached.get("thoughts", ""),
+                standalone_query=question
             )
         except Exception:
             logger.warning("Failed to log cached query metrics", exc_info=True)
@@ -163,23 +193,31 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
     max_attempts = 2
     for attempt in range(max_attempts):
         try:
+            # SMART SHORTCUT: If history is not empty but current question is identical 
+            # to one of the previous questions, we can assume its standalone form is the same.
+            # Otherwise, we MUST rewrite to ensure Turn 1 and Turn 2 can match deep keys.
             standalone_query = rewrite_query(question, history)
-            deep_key = f"rag_deep_cache:{hashlib.md5(standalone_query.strip().lower().encode()).hexdigest()}"
             
+            standalone_normalized = standalone_query.strip().lower()
+            standalone_hash = hashlib.md5(standalone_normalized.encode()).hexdigest()
+            deep_key = f"rag_deep_cache:{standalone_hash}"
+            
+            logger.info(f"Checking RAG Deep Cache: query='{standalone_query}', key={deep_key}")
             cached_deep = cache.get(deep_key)
             if cached_deep:
-                logger.info(f"RAG Deep Cache Hit: {standalone_query[:50]}...")
+                logger.info(f"RAG Deep Cache HIT for: {standalone_query[:50]}")
                 try:
                     log_query(
                         question=question,
-                        response_time=time.monotonic() - total_start,
-                        answer_length=len(cached_deep.get("answer", "")),
+                        answer=cached_deep["answer"],
+                        response_time=round(time.monotonic() - total_start, 2),
                         retrieval_time=0,
                         generation_time=0,
                         docs_retrieved=cached_deep.get("metrics", {}).get("docs_retrieved", 0),
                         chunks_processed=cached_deep.get("metrics", {}).get("chunks_processed", 0),
                         retrieval_scores=cached_deep.get("metrics", {}).get("retrieval_scores", []),
                         thoughts=cached_deep.get("thoughts", ""),
+                        standalone_query=standalone_query
                     )
                 except Exception:
                     logger.warning("Failed to log deep cached query metrics", exc_info=True)
@@ -270,8 +308,10 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     cache = get_cache_manager()
     quick_key = _get_cache_key(query, chat_history)
 
+    logger.info(f"Stream: Checking Quick Cache: key={quick_key}")
     cached = cache.get(quick_key)
     if cached:
+        logger.info("Stream: Quick Cache HIT")
         yield json.dumps({"step": "cached", "answer": cached["answer"]}) + "\n"
         yield json.dumps({
             "step": "done",
@@ -300,11 +340,13 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     try:
         yield json.dumps({"step": "rewriting"}) + "\n"
         standalone_query = await rewrite_query_async(query, chat_history)
-        
-        standalone_hash = hashlib.md5(standalone_query.strip().lower().encode()).hexdigest()
+        standalone_normalized = standalone_query.strip().lower()
+        standalone_hash = hashlib.md5(standalone_normalized.encode()).hexdigest()
         deep_key = f"rag_deep_cache:{standalone_hash}"
+        logger.info(f"Stream: Checking Deep Cache: query='{standalone_query}', key={deep_key}")
         cached_deep = cache.get(deep_key)
         if cached_deep:
+            logger.info("Stream: Deep Cache HIT")
             yield json.dumps({"step": "cached"}) + "\n"
             yield json.dumps({
                 "step": "done",
