@@ -7,6 +7,7 @@ from app.cache_manager import CacheManager
 def mock_cache():
     with patch("app.rag_pipeline.get_cache_manager") as mock:
         cache_inst = MagicMock(spec=CacheManager)
+        cache_inst.get_semantic.return_value = None
         mock.return_value = cache_inst
         yield cache_inst
 
