@@ -23,6 +23,7 @@ from .retriever import build_retriever, retrieve_documents, retrieve_documents_a
 import json
 from .utils import format_docs, ThinkingParser
 from .metrics import log_query
+from .embeddings import get_embeddings
 
 
 logger = logging.getLogger(__name__)
@@ -198,6 +199,34 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             # Otherwise, we MUST rewrite to ensure Turn 1 and Turn 2 can match deep keys.
             standalone_query = rewrite_query(question, history)
             
+            # --- SEMANTIC CACHE CHECK ---
+            embedder = get_embeddings()
+            query_embedding = embedder.embed_query(standalone_query)
+            
+            semantic_key = cache.get_semantic(query_embedding)
+            if semantic_key:
+                cached_sem = cache.get(semantic_key)
+                if cached_sem:
+                    logger.info(f"RAG Semantic Cache HIT for: {standalone_query[:50]}")
+                    try:
+                        log_query(
+                            question=question,
+                            answer=cached_sem["answer"],
+                            response_time=round(time.monotonic() - total_start, 2),
+                            retrieval_time=0,
+                            generation_time=0,
+                            docs_retrieved=cached_sem.get("metrics", {}).get("docs_retrieved", 0),
+                            chunks_processed=cached_sem.get("metrics", {}).get("chunks_processed", 0),
+                            retrieval_scores=cached_sem.get("metrics", {}).get("retrieval_scores", []),
+                            thoughts=cached_sem.get("thoughts", ""),
+                            standalone_query=standalone_query
+                        )
+                    except Exception:
+                        logger.warning("Failed to log semantic cached query metrics", exc_info=True)
+                    cache.set(quick_key, cached_sem, ttl=3600)
+                    return cached_sem
+            # ----------------------------
+            
             standalone_normalized = standalone_query.strip().lower()
             standalone_hash = hashlib.md5(standalone_normalized.encode()).hexdigest()
             deep_key = f"rag_deep_cache:{standalone_hash}"
@@ -224,42 +253,11 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
                 cache.set(quick_key, cached_deep, ttl=3600)
                 return cached_deep
 
-            # --- NEW: Semantic Cache Check ---
-            from .embeddings import get_embeddings
-            embedder = get_embeddings()
-            query_embedding = embedder.embed_query(standalone_query)
-            
-            semantic_key = cache.get_semantic(query_embedding, threshold=0.90)
-            if semantic_key:
-                cached_sem = cache.get(semantic_key)
-                if cached_sem:
-                    logger.info(f"RAG Semantic Cache HIT for: {standalone_query[:50]}")
-                    try:
-                        log_query(
-                            question=question,
-                            answer=cached_sem["answer"],
-                            response_time=round(time.monotonic() - total_start, 2),
-                            retrieval_time=0,
-                            generation_time=0,
-                            docs_retrieved=cached_sem.get("metrics", {}).get("docs_retrieved", 0),
-                            chunks_processed=cached_sem.get("metrics", {}).get("chunks_processed", 0),
-                            retrieval_scores=cached_sem.get("metrics", {}).get("retrieval_scores", []),
-                            thoughts=cached_sem.get("thoughts", ""),
-                            standalone_query=standalone_query
-                        )
-                    except Exception:
-                        logger.warning("Failed to log semantic cached query metrics", exc_info=True)
-                    cache.set(quick_key, cached_sem, ttl=3600)
-                    return cached_sem
-            # --------------------------------
-
             result = _run_rag_pipeline_with_query(standalone_query, question, history)
             cache.set(deep_key, result, ttl=3600)
             cache.set(quick_key, result, ttl=3600)
-            
             # Store in semantic cache
             cache.add_semantic(query_embedding, deep_key)
-            
             return result
         except Exception as exc:
             if attempt < (max_attempts - 1) and is_qdrant_client_closed_error(exc):
@@ -375,6 +373,41 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     try:
         yield json.dumps({"step": "rewriting"}) + "\n"
         standalone_query = await rewrite_query_async(query, chat_history)
+        
+        # --- SEMANTIC CACHE CHECK ---
+        embedder = get_embeddings()
+        query_embedding = embedder.embed_query(standalone_query)
+        
+        semantic_key = cache.get_semantic(query_embedding)
+        if semantic_key:
+            cached_sem = cache.get(semantic_key)
+            if cached_sem:
+                logger.info("Stream: Semantic Cache HIT")
+                yield json.dumps({"step": "cached", "answer": cached_sem["answer"]}) + "\n"
+                yield json.dumps({
+                    "step": "done",
+                    "answer": cached_sem["answer"],
+                    "thoughts": cached_sem.get("thoughts", ""),
+                    "sources": cached_sem["sources"],
+                    "metrics": cached_sem.get("metrics", {})
+                }) + "\n"
+                
+                try:
+                    log_query(
+                        question=query,
+                        response_time=time.monotonic() - total_start,
+                        answer_length=len(cached_sem["answer"]),
+                        retrieval_time=0,
+                        generation_time=0,
+                        thoughts=cached_sem.get("thoughts", ""),
+                        standalone_query=standalone_query,
+                    )
+                except Exception:
+                    pass
+                cache.set(quick_key, cached_sem, ttl=3600)
+                return
+        # ----------------------------
+        
         standalone_normalized = standalone_query.strip().lower()
         standalone_hash = hashlib.md5(standalone_normalized.encode()).hexdigest()
         deep_key = f"rag_deep_cache:{standalone_hash}"
@@ -404,41 +437,6 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
             except Exception:
                 pass
             return
-
-        # --- NEW: Semantic Cache Check ---
-        from .embeddings import get_embeddings
-        embedder = get_embeddings()
-        query_embedding = embedder.embed_query(standalone_query)
-        
-        semantic_key = cache.get_semantic(query_embedding, threshold=0.90)
-        if semantic_key:
-            cached_sem = cache.get(semantic_key)
-            if cached_sem:
-                logger.info("Stream: Semantic Cache HIT")
-                yield json.dumps({"step": "cached", "answer": cached_sem["answer"]}) + "\n"
-                yield json.dumps({
-                    "step": "done",
-                    "answer": cached_sem["answer"],
-                    "thoughts": cached_sem.get("thoughts", ""),
-                    "sources": cached_sem["sources"],
-                    "metrics": cached_sem.get("metrics", {})
-                }) + "\n"
-                
-                try:
-                    log_query(
-                        question=query,
-                        response_time=time.monotonic() - total_start,
-                        answer_length=len(cached_sem["answer"]),
-                        retrieval_time=0,
-                        generation_time=0,
-                        thoughts=cached_sem.get("thoughts", ""),
-                        standalone_query=standalone_query,
-                    )
-                except Exception:
-                    pass
-                cache.set(quick_key, cached_sem, ttl=3600)
-                return
-        # --------------------------------
 
         yield json.dumps({"step": "retrieving", "query": standalone_query}) + "\n"
         retriever, vectorstore, client = build_retriever()
@@ -522,7 +520,6 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         }
         cache.set(deep_key, cache_data, ttl=3600)
         cache.set(quick_key, cache_data, ttl=3600)
-        
         # Store in semantic cache
         cache.add_semantic(query_embedding, deep_key)
         
