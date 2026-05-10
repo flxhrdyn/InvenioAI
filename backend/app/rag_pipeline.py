@@ -198,12 +198,13 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             # to one of the previous questions, we can assume its standalone form is the same.
             # Otherwise, we MUST rewrite to ensure Turn 1 and Turn 2 can match deep keys.
             standalone_query = rewrite_query(question, history)
+            logger.info(f"Standalone Query: {standalone_query}")
             
             # --- SEMANTIC CACHE CHECK ---
             embedder = get_embeddings()
             query_embedding = embedder.embed_query(standalone_query)
             
-            semantic_key = cache.get_semantic(query_embedding)
+            semantic_key = cache.get_semantic(query_embedding, threshold=0.90)
             if semantic_key:
                 cached_sem = cache.get(semantic_key)
                 if cached_sem:
@@ -373,12 +374,13 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
     try:
         yield json.dumps({"step": "rewriting"}) + "\n"
         standalone_query = await rewrite_query_async(query, chat_history)
+        logger.info(f"Stream Standalone Query: {standalone_query}")
         
         # --- SEMANTIC CACHE CHECK ---
         embedder = get_embeddings()
         query_embedding = embedder.embed_query(standalone_query)
         
-        semantic_key = cache.get_semantic(query_embedding)
+        semantic_key = cache.get_semantic(query_embedding, threshold=0.90)
         if semantic_key:
             cached_sem = cache.get(semantic_key)
             if cached_sem:

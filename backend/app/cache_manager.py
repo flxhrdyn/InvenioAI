@@ -54,7 +54,7 @@ class CacheManager:
         except Exception as e:
             logger.warning(f"Cache set failed for key {key}: {e}")
 
-    def get_semantic(self, query_embedding: list[float], threshold: float = 0.95) -> Optional[str]:
+    def get_semantic(self, query_embedding: list[float], threshold: float = 0.90) -> Optional[str]:
         """Find a similar query in the semantic registry and return its cache key."""
         if self.cache_type != "diskcache" or self.disk_cache is None:
             return None
@@ -64,15 +64,15 @@ class CacheManager:
             return None
             
         import numpy as np
-        query_vec = np.array(query_embedding)
+        # Ensure 1D array
+        query_vec = np.array(query_embedding).flatten()
         
         best_score = -1.0
         best_key = None
         
         for entry in registry:
-            # entry: {"vector": [...], "key": "rag_cache:..."}
-            entry_vec = np.array(entry["vector"])
-            # Cosine similarity
+            entry_vec = np.array(entry["vector"]).flatten()
+            
             norm_a = np.linalg.norm(query_vec)
             norm_b = np.linalg.norm(entry_vec)
             if norm_a == 0 or norm_b == 0:
@@ -83,6 +83,8 @@ class CacheManager:
                 best_score = score
                 best_key = entry["key"]
                 
+        logger.debug(f"Semantic Cache Search: best_score={best_score:.4f}, threshold={threshold}")
+        
         if best_score >= threshold:
             logger.info(f"Semantic Cache HIT: score={best_score:.4f}")
             return best_key
