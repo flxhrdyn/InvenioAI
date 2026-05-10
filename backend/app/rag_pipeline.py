@@ -194,13 +194,11 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
     max_attempts = 2
     for attempt in range(max_attempts):
         try:
-            # SMART SHORTCUT: If history is not empty but current question is identical 
-            # to one of the previous questions, we can assume its standalone form is the same.
-            # Otherwise, we MUST rewrite to ensure Turn 1 and Turn 2 can match deep keys.
             standalone_query = rewrite_query(question, history)
             logger.info(f"Standalone Query: {standalone_query}")
             
             # --- SEMANTIC CACHE CHECK ---
+            # Check for semantically similar queries to avoid redundant RAG processing.
             embedder = get_embeddings()
             query_embedding = embedder.embed_query(standalone_query)
             
