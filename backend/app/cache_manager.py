@@ -96,6 +96,8 @@ class CacheManager:
             if best_score >= threshold:
                 logger.info(f"Semantic Cache HIT: score={best_score:.4f}")
                 return best_key
+            else:
+                logger.info(f"Semantic Cache MISS: best_score={best_score:.4f}, threshold={threshold}")
         except Exception as e:
             logger.warning(f"Semantic Cache lookup failed: {e}")
             
