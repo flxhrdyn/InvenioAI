@@ -29,6 +29,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 - **RAG Fusion**: Implements Multi-Query generation to capture diverse user intents and improve retrieval coverage.
 - **Advanced Reranking**: Utilizes Cross-Encoder models (`ms-marco-MultiBERT-L-12`) via FlashRank to re-evaluate top candidates, ensuring the most relevant context is provided to the LLM.
 - **Chain-of-Thought (CoT) Reasoning**: Implements a 4-step structured reasoning protocol (Query Deconstruction, Filtering, Synthesis, Strategy) to ensure grounded and logical answers.
+- **Semantic Caching**: Dual-layer caching strategy (Exact Match + Semantic Similarity > 0.90) to eliminate redundant LLM API calls and provide near-instant responses for paraphrased queries.
 - **Async Job Orchestration**: Background indexing and query execution with real-time status polling for a smooth user experience.
 - **Deep Analytics Dashboard**: Built-in metrics tracking for retrieval accuracy (nDCG, HitRate), latency, and API usage.
 - **Minimalist UI/UX**: Centered branding with 'Outfit' typography, glassmorphism aesthetics, and a streamlined Knowledge Base management interface.
@@ -44,6 +45,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 - **Embedding Model**: paraphrase-multilingual-MiniLM-L12-v2 (Local)
 - **Reranker**: FlashRank (ms-marco-MultiBERT-L-12 Cross-Encoder)
 - **Search**: BM25 (Lexical) + Qdrant (Dense) + RAG Fusion (Multi-Query)
+- **Caching**: Semantic Caching (DiskCache + Numpy Vector Similarity)
 
 ### Frontend
 - **Framework**: Streamlit
@@ -70,7 +72,9 @@ graph TD
         Split -->|Lexical| BM25[BM25 Index]
         
         API -->|Query Rewriting| Rewriter[Query Rewriter]
-        Rewriter -->|Multi-Query| RAG[Hybrid Retriever]
+        Rewriter -->|Semantic Lookup| Cache{Semantic Cache}
+        Cache -->|Miss| RAG[Hybrid Retriever]
+        Cache -->|Hit| LLM
         RAG -->|RRF Fusion| Fuse[RAG Fusion]
         Fuse -->|Reranking| Rerank[Cross-Encoder]
         Rerank -->|Context| LLM["Groq (Llama 3.1) LLM"]
