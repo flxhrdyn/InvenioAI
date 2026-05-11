@@ -106,16 +106,13 @@ PRELOAD_EMBEDDINGS_ON_STARTUP = _env_bool("INVENIOAI_PRELOAD_EMBEDDINGS", defaul
 # Retrieval
 RETRIEVAL_K = 10
 
-# Hybrid retrieval (dense + lexical) settings.
-# Hybrid uses weighted reciprocal-rank fusion (RRF) before reranking and is
-# enabled by default. Set INVENIOAI_ENABLE_HYBRID_SEARCH=0 to force dense-only.
+# Hybrid retrieval (dense + sparse/lexical) settings.
+# Hybrid uses weighted reciprocal-rank fusion (RRF) or weighted fusion in Qdrant.
+# Set INVENIOAI_ENABLE_HYBRID_SEARCH=0 to force dense-only.
 USE_HYBRID_SEARCH = _env_bool("INVENIOAI_ENABLE_HYBRID_SEARCH", default="1")
-HYBRID_LEXICAL_K = _env_int("INVENIOAI_HYBRID_LEXICAL_K", default=10, min_value=1)
-HYBRID_FUSION_LIMIT = _env_int("INVENIOAI_HYBRID_FUSION_LIMIT", default=20, min_value=1)
-HYBRID_MAX_LEXICAL_DOCS = _env_int("INVENIOAI_HYBRID_MAX_LEXICAL_DOCS", default=3000, min_value=100)
-HYBRID_RRF_K = _env_int("INVENIOAI_HYBRID_RRF_K", default=60, min_value=1)
-HYBRID_DENSE_WEIGHT = _env_float("INVENIOAI_HYBRID_DENSE_WEIGHT", default=1.0, min_value=0.0)
-HYBRID_LEXICAL_WEIGHT = _env_float("INVENIOAI_HYBRID_LEXICAL_WEIGHT", default=1.0, min_value=0.0)
+SPARSE_MODEL_NAME = _env_str("INVENIOAI_SPARSE_MODEL_NAME", "Qdrant/bm42-all-minilm-l6-v2-attentions")
+HYBRID_DENSE_WEIGHT = _env_float("INVENIOAI_HYBRID_DENSE_WEIGHT", default=0.5, min_value=0.0)
+HYBRID_SPARSE_WEIGHT = _env_float("INVENIOAI_HYBRID_SPARSE_WEIGHT", default=0.5, min_value=0.0)
 
 # Reranking
 RERANK_TOP_K = 5
