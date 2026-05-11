@@ -30,6 +30,11 @@ def _get_ranker() -> Ranker:
     return _ranker
 
 
+def preload_reranker() -> None:
+    """Preload the reranker model into memory."""
+    _get_ranker()
+
+
 def rerank(query: str, docs: List[Any]) -> Tuple[List[Any], List[float]]:
     """Return documents ordered by cross-encoder relevance.
 

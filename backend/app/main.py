@@ -20,11 +20,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from .embeddings import get_embeddings
+from .embeddings import get_embeddings, get_sparse_embeddings
 from .index_api import router as index_router
 from .config import PRELOAD_EMBEDDINGS_ON_STARTUP
 from .rag_pipeline import rag_pipeline
-from .qdrant_conn import close_qdrant_client
+from .qdrant_conn import close_qdrant_client, get_qdrant_client
+from .reranker import preload_reranker
 from .metrics import (
     load_metrics,
     get_avg_response_time,
@@ -39,6 +40,17 @@ from .metrics import (
 
 logger = logging.getLogger(__name__)
 
+
+def preload_all_models() -> None:
+    """Preload all model singletons (Dense, Sparse, Reranker) and Qdrant connection."""
+    logger.info("Starting full model preload...")
+    get_embeddings()
+    get_sparse_embeddings()
+    preload_reranker()
+    get_qdrant_client()
+    logger.info("All models and database connections preloaded successfully.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
@@ -46,10 +58,9 @@ async def lifespan(app: FastAPI):
         logger.info("Embedding preload skipped (INVENIOAI_PRELOAD_EMBEDDINGS=0)")
     else:
         try:
-            get_embeddings()
-            logger.info("Embedding model preloaded")
+            preload_all_models()
         except Exception:
-            logger.warning("Embedding preload failed; falling back to lazy init", exc_info=True)
+            logger.warning("Full model preload failed; falling back to lazy init", exc_info=True)
     
     # Reconcile metrics: Sync total_documents_indexed from Qdrant persistent storage
     try:
