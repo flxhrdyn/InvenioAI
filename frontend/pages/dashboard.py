@@ -118,7 +118,7 @@ with st.sidebar:
     k_val = st.slider("k (top-k docs)", min_value=1, max_value=10, value=5,
                       help="Number of top documents evaluated in each @k metric.")
 
-    threshold = st.slider("Relevance Threshold", min_value=0.0, max_value=1.0, value=0.01, step=0.01,
+    threshold = st.slider("Relevance Threshold", min_value=0.0, max_value=1.0, value=0.7, step=0.01,
                           help="Score ≥ threshold → relevant. Relevance is estimated from cosine similarity scores.")
 
     
