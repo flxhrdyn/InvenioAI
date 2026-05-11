@@ -321,18 +321,35 @@ button {{
 """, unsafe_allow_html=True)
 
 
-@st.cache_data(ttl=30, show_spinner=False)
 def _fetch_indexed_documents(api_base_url: str) -> list[str]:
+    """Fetch filenames from backend. We handle caching manually to avoid 
+    caching empty states during startup.
+    """
+    cache_key = f"docs_list_{api_base_url}"
+    now = time.time()
+    
+    # Check manual cache in session_state
+    if "docs_cache" in st.session_state:
+        cache_data, cache_time = st.session_state.docs_cache
+        if now - cache_time < 30: # 30s TTL
+            return cache_data
+
     try:
         resp = requests.get(f"{api_base_url}/documents", timeout=5)
         if resp.status_code != 200:
             return []
         payload = resp.json() or {}
-        # The backend returns a list of filenames directly based on my recent checks
+        
         if isinstance(payload, list):
-            return [str(d) for d in payload if d]
-        docs = payload.get("documents") or []
-        return [str(d) for d in docs if d]
+            docs = [str(d) for d in payload if d]
+        else:
+            docs = [str(d) for d in (payload.get("documents") or []) if d]
+            
+        # ONLY cache if we found documents. 
+        # If empty, don't cache so we keep polling on next rerun.
+        if docs:
+            st.session_state.docs_cache = (docs, now)
+        return docs
     except Exception:
         return []
 
@@ -505,7 +522,8 @@ with st.sidebar:
                     )
                     if ok:
                         st.success(message)
-                        _fetch_indexed_documents.clear()
+                        if "docs_cache" in st.session_state:
+                            del st.session_state.docs_cache
                         st.rerun()
                     else:
                         if "still running in the background" in message:
@@ -532,7 +550,8 @@ with st.sidebar:
                             timeout=30
                         )
                         resp.raise_for_status()
-                        _fetch_indexed_documents.clear()
+                        if "docs_cache" in st.session_state:
+                            del st.session_state.docs_cache
                         st.rerun()
                     except Exception as e:
                         if hasattr(e, 'response') and e.response is not None:
@@ -556,7 +575,8 @@ with st.sidebar:
                 resp.raise_for_status()
                 st.session_state.messages = []
                 clear_persistent_history()
-                _fetch_indexed_documents.clear()
+                if "docs_cache" in st.session_state:
+                    del st.session_state.docs_cache
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ Failed: {e}")
