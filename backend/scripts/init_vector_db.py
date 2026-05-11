@@ -22,8 +22,8 @@ def reset_vector_db():
     
     if QDRANT_COLLECTION in collection_names:
         logger.warning(f"Koleksi '{QDRANT_COLLECTION}' ditemukan.")
-        logger.warning("Karena kita menggunakan model embedding baru (FastEmbed Multilingual), "
-                       "kita harus menghapus koleksi lama agar tidak terjadi konflik vector space.")
+        logger.warning("Karena kita beralih ke Native Hybrid Search (BM42), "
+                       "kita harus menghapus dan membuat ulang koleksi dengan skema baru.")
         
         if "--force" in sys.argv:
             client.delete_collection(QDRANT_COLLECTION)
@@ -33,9 +33,27 @@ def reset_vector_db():
             logger.info("Contoh: uv run python scripts/init_vector_db.py --force")
             return
     else:
-        logger.info(f"Koleksi '{QDRANT_COLLECTION}' belum ada. Aman untuk melanjutkan.")
-        
-    logger.info("Selesai! Vector DB sekarang bersih.")
+        logger.info(f"Koleksi '{QDRANT_COLLECTION}' belum ada. Membuat koleksi baru...")
+
+    from qdrant_client import models
+    from app.embeddings import get_embeddings
+    
+    embeddings = get_embeddings()
+    # Get vector size dynamically
+    vector_size = len(embeddings.embed_query("test"))
+    
+    client.create_collection(
+        collection_name=QDRANT_COLLECTION,
+        vectors_config={
+            "dense": models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
+        },
+        sparse_vectors_config={
+            "sparse": models.SparseVectorParams()
+        }
+    )
+    
+    logger.info(f"Koleksi '{QDRANT_COLLECTION}' berhasil dibuat dengan dukungan Hybrid Search (Dense + Sparse).")
+    logger.info("Selesai! Vector DB sekarang siap.")
     logger.info("Gunakan app/index_data.py (atau script ingestion Anda) untuk mulai memasukkan dokumen baru.")
 
 if __name__ == "__main__":
