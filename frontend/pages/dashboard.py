@@ -26,6 +26,7 @@ from backend.app.metrics import (
     per_query_ir_metrics,
     reset_metrics,
 )
+from backend.app.config import RETRIEVAL_K
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -115,7 +116,7 @@ with st.sidebar:
 
     st.subheader("Evaluation Parameters")
 
-    k_val = st.slider("k (top-k docs)", min_value=1, max_value=10, value=5,
+    k_val = st.slider("k (top-k docs)", min_value=1, max_value=RETRIEVAL_K, value=RETRIEVAL_K,
                       help="Number of top documents evaluated in each @k metric.")
 
     threshold = st.slider("Relevance Threshold", min_value=0.0, max_value=1.0, value=0.7, step=0.01,
