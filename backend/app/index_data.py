@@ -135,4 +135,12 @@ def index_documents(file_path: str) -> None:
 
     # Update metrics
     log_document_indexed()
-    logger.info("Indexing complete (%.2fs total)", time.monotonic() - total_start)
+    logger.info("Indexing complete (%.2fs total)", time.monotonic() - total_start)
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        logging.basicConfig(level=logging.INFO)
+        index_documents(sys.argv[1])
+    else:
+        print("Usage: python backend/app/index_data.py <pdf_path>")

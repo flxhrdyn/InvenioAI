@@ -14,7 +14,6 @@ def test_sparse_embedding_output():
     # assert isinstance(vector[0], dict)
     
     vector = model.embed_query(query)
-    assert isinstance(vector, dict)
-    assert "indices" in vector
-    assert "values" in vector
-    assert len(vector["indices"]) > 0
+    assert hasattr(vector, "indices")
+    assert hasattr(vector, "values")
+    assert len(vector.indices) > 0

@@ -25,7 +25,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 
 ## Technical Features
 
-- **Hybrid Search**: Combines dense semantic retrieval (MMR) with lexical BM25 search, fused via weighted Reciprocal Rank Fusion (RRF).
+- **Hybrid Search**: Combines dense semantic retrieval (MMR) with server-side sparse vector search (BM42), fused natively in Qdrant for superior accuracy and scalability.
 - **RAG Fusion**: Implements Multi-Query generation to capture diverse user intents and improve retrieval coverage.
 - **Advanced Reranking**: Utilizes Cross-Encoder models (`ms-marco-MultiBERT-L-12`) via FlashRank to re-evaluate top candidates, ensuring the most relevant context is provided to the LLM.
 - **Chain-of-Thought (CoT) Reasoning**: Implements a 4-step structured reasoning protocol (Query Deconstruction, Filtering, Synthesis, Strategy) to ensure grounded and logical answers.
@@ -44,7 +44,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 - **Reasoning**: Chain-of-Thought (CoT) structured 4-step protocol
 - **Embedding Model**: paraphrase-multilingual-MiniLM-L12-v2 (Local)
 - **Reranker**: FlashRank (ms-marco-MultiBERT-L-12 Cross-Encoder)
-- **Search**: BM25 (Lexical) + Qdrant (Dense) + RAG Fusion (Multi-Query)
+- **Search**: Qdrant Native Hybrid (Dense + BM42 Sparse) + RAG Fusion (Multi-Query)
 - **Caching**: Semantic Caching (DiskCache + Numpy Vector Similarity)
 
 ### Frontend
@@ -68,15 +68,14 @@ graph TD
     end
     
     subgraph Intelligence_Layer [Processing & RAG]
-        Split -->|Dense| QDR[Qdrant Vector DB]
-        Split -->|Lexical| BM25[BM25 Index]
+        Split -->|Dense + Sparse| QDR[Qdrant Vector DB]
         
         API -->|Query Rewriting| Rewriter[Query Rewriter]
         Rewriter -->|Semantic Lookup| Cache{Semantic Cache}
         Cache -->|Miss| RAG[Hybrid Retriever]
         Cache -->|Hit| LLM
-        RAG -->|RRF Fusion| Fuse[RAG Fusion]
-        Fuse -->|Reranking| Rerank[Cross-Encoder]
+        RAG -->|Native Hybrid| QDR
+        QDR -->|Reranking| Rerank[Cross-Encoder]
         Rerank -->|Context| LLM["Groq (Llama 3.1) LLM"]
     end
     
@@ -97,7 +96,7 @@ InvenioAI is optimized for speed and retrieval precision while maintaining low o
 ### Core Metrics & Operational Limits
 | Parameter | Value | Description |
 | :--- | :--- | :--- |
-| **Retrieval Mode** | **Hybrid** | Dense (MMR) + Lexical (BM25) |
+| **Retrieval Mode** | **Native Hybrid** | Dense (MMR) + Sparse (BM42) |
 | **Rerank Top-K** | **5 Docs** | Optimized context window for LLM |
 | **Avg. Response** | **~15s** | Total end-to-end latency (RAG Fusion + Reranking) |
 | **Avg. Retrieval** | **~2s** | Multi-query hybrid search & RRF fusion time |
@@ -108,7 +107,7 @@ InvenioAI is optimized for speed and retrieval precision while maintaining low o
 
 ### Prerequisites
 *   Python 3.10+
-*   Google Groq (Llama 3.1) API Key
+*   Google Groq (Llama 3.3) API Key
 *   Qdrant Instance (Optional, defaults to local storage)
 
 ### Execution Procedures

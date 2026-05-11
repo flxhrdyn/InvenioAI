@@ -7,6 +7,7 @@ memory for the lifetime of the process.
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import NamedTuple
 
 # Import config before importing the HF stack so environment defaults (timeouts,
 # offline mode) are applied early.
@@ -21,6 +22,10 @@ def get_embeddings() -> FastEmbedEmbeddings:
     """Return a cached dense embedding model instance."""
     return FastEmbedEmbeddings(model_name=EMBEDDING_MODEL)
 
+class SparseEmbedding(NamedTuple):
+    indices: list[int]
+    values: list[float]
+
 class FastEmbedSparse:
     """Wrapper for FastEmbed SparseTextEmbedding to provide a consistent interface."""
     def __init__(self, model_name: str):
@@ -30,12 +35,12 @@ class FastEmbedSparse:
         """Generate sparse embeddings for a single query."""
         results = list(self.model.embed([text]))
         r = results[0]
-        return {"indices": r.indices.tolist(), "values": r.values.tolist()}
+        return SparseEmbedding(indices=r.indices.tolist(), values=r.values.tolist())
 
     def embed_documents(self, texts: list[str]):
         """Generate sparse embeddings for multiple documents."""
         results = self.model.embed(texts)
-        return [{"indices": r.indices.tolist(), "values": r.values.tolist()} for r in results]
+        return [SparseEmbedding(indices=r.indices.tolist(), values=r.values.tolist()) for r in results]
 
 @lru_cache(maxsize=1)
 def get_sparse_embeddings() -> FastEmbedSparse:
