@@ -124,10 +124,10 @@ with st.sidebar:
 
     
 
-    if st.button("🔄 Refresh Data", use_container_width=True):
+    if st.button("🔄 Refresh Data", width="stretch"):
         st.rerun()
 
-    if st.button("🗑️ Reset Metrics", use_container_width=True):
+    if st.button("🗑️ Reset Metrics", width="stretch"):
         reset_metrics()
         st.success("Metrics reset!")
         st.rerun()
@@ -219,7 +219,7 @@ if per_q:
             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
         ),
     )
-    st.plotly_chart(fig_time, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_time, width="stretch", config={"displayModeBar": False})
 
 # ── Aggregate stats ───────────────────────────────────────────────────────────
 st.subheader("📊 Aggregate Statistics")
@@ -256,7 +256,7 @@ if per_q:
             lambda x: f"{x:.4f}" if pd.notna(x) else "—"
         )
 
-    st.dataframe(df_display, use_container_width=True, hide_index=True, height=320)
+    st.dataframe(df_display, width="stretch", hide_index=True, height=320)
 else:
     st.info("No query history yet.")
 

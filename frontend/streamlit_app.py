@@ -491,7 +491,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Add documents to build your AI knowledge base", type=["pdf"])
     if uploaded_file:
         upload_status_slot = st.empty()
-        if st.button("⚡ Process & Index", use_container_width=True):
+        if st.button("⚡ Process & Index", width="stretch"):
             with st.spinner("Indexing document..."):
                 job_id, err = create_upload_job(uploaded_file)
                 if err or not job_id:
@@ -549,7 +549,7 @@ with st.sidebar:
     st.markdown('<div style="margin-top: -70px;"></div>', unsafe_allow_html=True)
     
     # Action Buttons (tightly coupled to Knowledge Base)
-    if st.button("🗑️ Delete All Documents", use_container_width=True):
+    if st.button("🗑️ Delete All Documents", width="stretch"):
         with st.spinner("Deleting..."):
             try:
                 resp = requests.delete(f"{API_BASE_URL}/documents", timeout=60)
@@ -561,7 +561,7 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"❌ Failed: {e}")
     
-    if st.button("💬 Clear Chat History", use_container_width=True):
+    if st.button("💬 Clear Chat History", width="stretch"):
         st.session_state.messages = []
         clear_persistent_history()
         st.rerun()
