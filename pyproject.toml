@@ -3,7 +3,7 @@ name = "rag-invenio-ai"
 version = "0.1.0"
 description = "Advanced RAG Pipeline with Groq, FastEmbed, and Streamlit"
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",

@@ -8,7 +8,7 @@
   [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain.com/)
   [![Qdrant](https://img.shields.io/badge/Qdrant-FF4B4B?style=for-the-badge&logo=qdrant&logoColor=white)](https://qdrant.tech/)
   [![Groq](https://img.shields.io/badge/Groq-Llama_3.1-f3a536?style=for-the-badge&logo=openai&logoColor=white)](https://groq.com/)
-  [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+  [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 </div>
 
 ---
@@ -56,7 +56,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 ### Infrastructure
 - **Vector Database**: Qdrant (Local / Server / Cloud)
 - **Deployment**: Docker, GitHub Actions (CI/CD)
-- **Environment**: Python 3.10+
+- **Environment**: Python 3.12
 
 ## System Architecture
 
@@ -106,7 +106,7 @@ InvenioAI is optimized for speed and retrieval precision while maintaining low o
 ## Deployment Guide
 
 ### Prerequisites
-*   Python 3.10+
+*   Python 3.12
 *   Google Groq (Llama 3.3) API Key
 *   Qdrant Instance (Optional, defaults to local storage)
 
