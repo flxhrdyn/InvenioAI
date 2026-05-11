@@ -219,7 +219,7 @@ def _binary_relevance(scores: List[float], threshold: float) -> List[int]:
     return [1 if s >= threshold else 0 for s in scores]
 
 
-def precision_at_k(scores: List[float], k: int, threshold: float = 0.01) -> float:
+def precision_at_k(scores: List[float], k: int, threshold: float = 0.7) -> float:
     """Precision@k: fraction of top-k retrieved docs that are relevant."""
     if not scores or k == 0:
         return 0.0
@@ -227,7 +227,7 @@ def precision_at_k(scores: List[float], k: int, threshold: float = 0.01) -> floa
     return sum(rel) / k
 
 
-def recall_at_k(scores: List[float], k: int, threshold: float = 0.01) -> float:
+def recall_at_k(scores: List[float], k: int, threshold: float = 0.7) -> float:
     """Recall@k: fraction of relevant docs found in top-k.
 
     Since total relevant in the collection is unknown, we approximate using the
@@ -242,7 +242,7 @@ def recall_at_k(scores: List[float], k: int, threshold: float = 0.01) -> float:
     return relevant_in_k / total_relevant
 
 
-def mrr(scores: List[float], threshold: float = 0.01) -> float:
+def mrr(scores: List[float], threshold: float = 0.7) -> float:
     """Mean Reciprocal Rank: 1/rank of the first relevant document."""
     for i, s in enumerate(scores):
         if s >= threshold:
@@ -262,7 +262,7 @@ def ndcg_at_k(scores: List[float], k: int) -> float:
     return (dcg / idcg) if idcg > 0 else 0.0
 
 
-def hit_rate_at_k(scores: List[float], k: int, threshold: float = 0.01) -> float:
+def hit_rate_at_k(scores: List[float], k: int, threshold: float = 0.7) -> float:
     """HitRate@k: 1 if at least one relevant doc in top-k, else 0."""
     if not scores:
         return 0.0
@@ -272,7 +272,7 @@ def hit_rate_at_k(scores: List[float], k: int, threshold: float = 0.01) -> float
 def compute_ir_metrics(
     query_history: List[Dict[str, Any]],
     k: int = 5,
-    threshold: float = 0.01,
+    threshold: float = 0.7,
 ) -> Dict[str, Any]:
     """Compute aggregate IR metrics from stored query history."""
     entries_with_scores = [
@@ -311,7 +311,7 @@ def compute_ir_metrics(
 def per_query_ir_metrics(
     query_history: List[Dict[str, Any]],
     k: int = 5,
-    threshold: float = 0.01,
+    threshold: float = 0.7,
 ) -> List[Dict[str, Any]]:
     """Return per-query IR metrics for charting."""
     rows = []
