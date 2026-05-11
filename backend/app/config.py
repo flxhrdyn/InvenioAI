@@ -101,7 +101,7 @@ INDEXING_BATCH_SIZE = _env_int("INVENIOAI_INDEXING_BATCH_SIZE", default=32, min_
 
 # Startup preload can make the first request faster, but on constrained
 # deployments it may increase cold-start time and memory pressure.
-PRELOAD_EMBEDDINGS_ON_STARTUP = _env_bool("INVENIOAI_PRELOAD_EMBEDDINGS", default="0")
+PRELOAD_EMBEDDINGS_ON_STARTUP = _env_bool("INVENIOAI_PRELOAD_EMBEDDINGS", default="1")
 
 # Retrieval
 RETRIEVAL_K = 10

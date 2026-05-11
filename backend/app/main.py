@@ -59,7 +59,6 @@ def preload_all_models() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
-    print(f"DEBUG: Lifespan started. PRELOAD_EMBEDDINGS_ON_STARTUP={PRELOAD_EMBEDDINGS_ON_STARTUP}")
     logger.info(f"Lifespan starting. Preload setting: {PRELOAD_EMBEDDINGS_ON_STARTUP}")
     
     if not PRELOAD_EMBEDDINGS_ON_STARTUP:
