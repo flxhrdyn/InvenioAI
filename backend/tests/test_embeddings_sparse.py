@@ -13,8 +13,8 @@ def test_sparse_embedding_output():
     # vector = list(model.embed_query(query))
     # assert isinstance(vector[0], dict)
     
-    vector = list(model.embed_query(query))
-    assert len(vector) > 0
-    assert isinstance(vector[0], dict) # FastEmbed sparse output format: {"indices": [...], "values": [...]}
-    assert "indices" in vector[0]
-    assert "values" in vector[0]
+    vector = model.embed_query(query)
+    assert isinstance(vector, dict)
+    assert "indices" in vector
+    assert "values" in vector
+    assert len(vector["indices"]) > 0

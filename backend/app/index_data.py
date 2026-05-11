@@ -17,7 +17,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client.models import Distance, VectorParams
 from langchain_core.documents import Document
 
-from .embeddings import get_embeddings
+from .embeddings import get_embeddings, get_sparse_embeddings
 from .config import QDRANT_COLLECTION, INDEXING_BATCH_SIZE, CHUNK_SIZE, CHUNK_OVERLAP
 from .metrics import log_document_indexed
 from .qdrant_conn import get_qdrant_client, is_qdrant_client_closed_error, recreate_qdrant_client
@@ -95,10 +95,15 @@ def index_documents(file_path: str) -> None:
 
                 client.create_collection(
                     collection_name=QDRANT_COLLECTION,
-                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+                    vectors_config={
+                        "dense": VectorParams(size=vector_size, distance=Distance.COSINE)
+                    },
+                    sparse_vectors_config={
+                        "sparse": models.SparseVectorParams()
+                    },
                 )
 
-                logger.info("Qdrant collection created")
+                logger.info("Qdrant collection created with Hybrid Search support (Dense + Sparse)")
             else:
                 logger.info("Using existing Qdrant collection: %s", QDRANT_COLLECTION)
 
@@ -106,6 +111,9 @@ def index_documents(file_path: str) -> None:
                 client=client,
                 collection_name=QDRANT_COLLECTION,
                 embedding=embeddings,
+                sparse_embedding=get_sparse_embeddings(),
+                vector_name="dense",
+                sparse_vector_name="sparse",
             )
             
             upsert_start = time.monotonic()

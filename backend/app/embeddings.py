@@ -28,15 +28,14 @@ class FastEmbedSparse:
     
     def embed_query(self, text: str):
         """Generate sparse embeddings for a single query."""
-        results = self.model.embed([text])
-        for r in results:
-            yield {"indices": r.indices.tolist(), "values": r.values.tolist()}
+        results = list(self.model.embed([text]))
+        r = results[0]
+        return {"indices": r.indices.tolist(), "values": r.values.tolist()}
 
     def embed_documents(self, texts: list[str]):
         """Generate sparse embeddings for multiple documents."""
         results = self.model.embed(texts)
-        for r in results:
-            yield {"indices": r.indices.tolist(), "values": r.values.tolist()}
+        return [{"indices": r.indices.tolist(), "values": r.values.tolist()} for r in results]
 
 @lru_cache(maxsize=1)
 def get_sparse_embeddings() -> FastEmbedSparse:
