@@ -23,6 +23,5 @@ async def test_retrieve_documents_async_returns_correct_types_and_metadata():
     assert isinstance(metadata, dict)
     
     assert "mode" in metadata
-    assert "dense_docs" in metadata
-    assert "fused_docs" in metadata
-    assert metadata["fused_docs"] == len(docs)
+    assert "count" in metadata
+    assert metadata["count"] == len(docs)
