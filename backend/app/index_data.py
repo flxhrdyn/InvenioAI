@@ -14,7 +14,7 @@ from pathlib import Path
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_qdrant import QdrantVectorStore
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client import models
 from langchain_core.documents import Document
 
 from .embeddings import get_embeddings, get_sparse_embeddings
@@ -96,7 +96,7 @@ def index_documents(file_path: str) -> None:
                 client.create_collection(
                     collection_name=QDRANT_COLLECTION,
                     vectors_config={
-                        "dense": VectorParams(size=vector_size, distance=Distance.COSINE)
+                        "dense": models.VectorParams(size=vector_size, distance=models.Distance.COSINE)
                     },
                     sparse_vectors_config={
                         "sparse": models.SparseVectorParams()
