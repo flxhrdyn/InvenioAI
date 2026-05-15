@@ -43,7 +43,24 @@ Standalone Question:
 
 
 RAG_PROMPT = """
-Answer the question using ONLY the context.
+Answer the question using the provided context. Follow the instructions strictly.
+
+DATA RULES:
+1. **Table is King**: If a value is in a table, use it. ALWAYS double check the column header (e.g., 2023 vs 2022).
+2. **Column Alignment**: If a table looks truncated, look for the row label and count columns carefully. 
+3. **No Math**: Do NOT calculate if the final number is already there.
+4. **Units**: $m = juta, $b = miliar (in Indonesian).
+
+EXAMPLE OF CORRECT REASONING:
+Context: "Table: | Item | 2023 | 2022 | \n | Revenue | 15,433 | 16,136 |"
+User: "Berapa revenue 2023?"
+<thinking>
+Step 1: Entity is Revenue, Year is 2023.
+Step 2: Table has two years: 2023 and 2022.
+Step 3: Column 2023 corresponds to 15,433. Column 2022 corresponds to 16,136.
+Step 4: The answer for 2023 is 15,433.
+</thinking>
+Revenue pada tahun 2023 adalah 15.433 juta.
 
 Context:
 {context}
@@ -52,15 +69,11 @@ Question:
 {question}
 
 Instructions:
-1. START your response IMMEDIATELY with a multi-step structured reasoning process inside <thinking>...</thinking> tags.
-   You MUST follow this 4-step protocol:
-   - **Step 1: Query Deconstruction**: Identify core entities and the specific intent of the user.
-   - **Step 2: Information Retrieval & Filtering**: Evaluate the provided context and select only the most relevant snippets.
-   - **Step 3: Fact Synthesis**: Connect the extracted facts to form a logical chain of evidence.
-   - **Step 4: Answer Strategy**: Define the best way to present the final answer (e.g., as a definition, list, or explanation).
-   Do NOT say anything else before the <thinking> tag.
-2. After the thinking process, provide the final answer in the same language.
-3. Be professional and concise.
+1. START with <thinking>...</thinking>.
+2. Inside, use 4 Steps: 1. Deconstruction, 2. Retrieval, 3. Synthesis (Check Table vs Text), 4. Strategy.
+3. CLOSE the tag </thinking> before answering.
+4. Provide a professional, narrative answer in the SAME LANGUAGE as the question.
+5. Always cite sources at the end.
 
 Sources:
 {sources}

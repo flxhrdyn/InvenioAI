@@ -90,14 +90,14 @@ DELETE_UPLOADED_PDFS = (
 )
 
 # Chunking
-CHUNK_SIZE = _env_int("INVENIOAI_CHUNK_SIZE", default=800, min_value=128)
+CHUNK_SIZE = _env_int("INVENIOAI_CHUNK_SIZE", default=1500, min_value=128)
 CHUNK_OVERLAP = _env_int("INVENIOAI_CHUNK_OVERLAP", default=100, min_value=0)
 if CHUNK_OVERLAP >= CHUNK_SIZE:
     CHUNK_OVERLAP = max(0, CHUNK_SIZE // 4)
 
 # Smaller default batch is safer for constrained runtimes (HF Spaces free tier,
 # small containers) and often avoids long stalls from memory pressure.
-INDEXING_BATCH_SIZE = _env_int("INVENIOAI_INDEXING_BATCH_SIZE", default=32, min_value=8)
+INDEXING_BATCH_SIZE = _env_int("INVENIOAI_INDEXING_BATCH_SIZE", default=16, min_value=8)
 
 # Startup preload can make the first request faster, but on constrained
 # deployments it may increase cold-start time and memory pressure.

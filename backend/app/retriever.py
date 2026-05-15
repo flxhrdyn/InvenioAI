@@ -67,7 +67,7 @@ def build_retriever() -> Tuple[MultiQueryRetriever, QdrantVectorStore, QdrantCli
             collection_name=QDRANT_COLLECTION,
             embedding=embeddings,
             sparse_embedding=sparse_embeddings,
-            vector_name="dense",
+            vector_name="",
             sparse_vector_name="sparse",
             retrieval_mode=RetrievalMode.HYBRID,
         )
@@ -77,7 +77,7 @@ def build_retriever() -> Tuple[MultiQueryRetriever, QdrantVectorStore, QdrantCli
             client=client,
             collection_name=QDRANT_COLLECTION,
             embedding=embeddings,
-            vector_name="dense",
+            vector_name="",
         )
 
     # Base retriever with MMR for diversity

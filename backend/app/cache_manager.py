@@ -105,3 +105,15 @@ class CacheManager:
         if len(registry) > 1000:
             registry = registry[-1000:]
         self.disk_cache.set("semantic_registry", registry)
+
+    def clear(self) -> None:
+        """Wipe the entire cache and semantic registry."""
+        try:
+            if self.cache_type == "redis" and self.redis_client:
+                self.redis_client.flushdb()
+                logger.info("Redis cache cleared.")
+            elif self.cache_type == "diskcache" and self.disk_cache is not None:
+                self.disk_cache.clear()
+                logger.info("Diskcache cleared.")
+        except Exception as e:
+            logger.error(f"Failed to clear cache: {e}")

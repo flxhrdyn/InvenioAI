@@ -25,9 +25,12 @@ RUN uv pip install -r requirements.txt
 # Final stage
 FROM python:3.12-slim-bookworm
 
-# Install Java 17 for OpenDataLoader
+# Install Java 17 and system libraries for Docling (Hybrid Mode)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jre-headless \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1 \

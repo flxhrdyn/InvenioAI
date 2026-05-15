@@ -58,7 +58,7 @@ def _is_hf_spaces_runtime() -> bool:
 
 def _get_upload_timeout_seconds() -> int:
     # Upload + indexing may take longer on cold starts, especially in HF Spaces.
-    default_timeout = 600 if _is_hf_spaces_runtime() else 120
+    default_timeout = 600
     raw = (os.getenv("INVENIOAI_UPLOAD_TIMEOUT_SECONDS") or "").strip()
     if not raw:
         return default_timeout
@@ -318,35 +318,35 @@ button {{
     transition: all 0.2s ease !important;
 }}
 /* ── Table Styling ── */
-table {
+table {{
     width: 100% !important;
     border-collapse: collapse !important;
     margin: 1rem 0 !important;
     font-size: 0.9rem !important;
-}
+}}
 
-th {
+th {{
     background-color: var(--invenio-bg-secondary) !important;
     color: var(--invenio-accent) !important;
     text-align: left !important;
     padding: 10px !important;
     border-bottom: 2px solid var(--invenio-border) !important;
-}
+}}
 
-td {
+td {{
     padding: 8px 10px !important;
     border-bottom: 1px solid var(--invenio-border) !important;
-}
+}}
 
-tr:hover {
+tr:hover {{
     background-color: rgba(128, 128, 128, 0.05) !important;
-}
+}}
 
 /* Ensure horizontal scroll for wide tables */
-.stMarkdown div[style*="overflow-x: auto"] {
+.stMarkdown div[style*="overflow-x: auto"] {{
     scrollbar-width: thin;
     scrollbar-color: var(--invenio-border) transparent;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -473,7 +473,13 @@ def _render_upload_job_status(
         status_slot.info(f"{label} queued for indexing... ({elapsed_seconds:.0f}s){eta_suffix}")
         return
     if status == "running":
-        status_slot.info(f"{label} is being indexed... ({elapsed_seconds:.0f}s){eta_suffix}")
+        status_slot.info(f"{label} is starting up... ({elapsed_seconds:.0f}s){eta_suffix}")
+        return
+    if status == "parsing":
+        status_slot.info(f"{label} is being parsed by AI Cloud... ({elapsed_seconds:.0f}s){eta_suffix}")
+        return
+    if status == "indexing":
+        status_slot.info(f"{label} is being saved to vector store... ({elapsed_seconds:.0f}s){eta_suffix}")
         return
     if status == "succeeded":
         status_slot.success(f"{label} indexing completed.")
@@ -482,7 +488,7 @@ def _render_upload_job_status(
         status_slot.error(f"{label} indexing failed.")
         return
 
-    status_slot.info(f"{label} status: {status}")
+    status_slot.info(f"{label} status: {status} ({elapsed_seconds:.0f}s)")
 
 
 
@@ -679,9 +685,9 @@ if _is_chat_active():
                                 
                                 meta_parts = []
                                 if page:
-                                    meta_parts.append(f"Page {page}")
+                                    meta_parts.append(f"**Page {page}**")
                                 if header:
-                                    meta_parts.append(header)
+                                    meta_parts.append(f"_{header}_")
                                 
                                 if meta_parts:
                                     st.caption(" · ".join(meta_parts))

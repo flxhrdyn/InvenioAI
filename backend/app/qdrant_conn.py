@@ -34,6 +34,7 @@ def _create_qdrant_client() -> QdrantClient:
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
             prefer_grpc=prefer_grpc,
+            timeout=60,  # Increase timeout for cloud operations
         )
 
     return QdrantClient(path=QDRANT_PATH)

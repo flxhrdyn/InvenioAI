@@ -1,0 +1,47 @@
+@echo off
+setlocal enabledelayedexpansion
+
+echo ==========================================
+echo    🧠 InvenioAI | Intelligent RAG
+echo ==========================================
+echo.
+
+:: Set PYTHONPATH so uvicorn can find the 'app' module inside 'backend'
+set PYTHONPATH=%PYTHONPATH%;%CD%\backend
+
+:: Force Java path (tahan banting)
+set "PATH=C:\Program Files\Java\jdk-21\bin;%PATH%"
+set "JAVA_HOME=C:\Program Files\Java\jdk-21"
+
+:: Check if virtual environment exists and activate it
+if exist ".venv\Scripts\activate.bat" (
+    echo [INFO] Activating virtual environment (.venv)...
+    call .venv\Scripts\activate.bat
+) else (
+    echo [WARN] Virtual environment (.venv) not found. Using global python.
+)
+
+:: Ensure Java is working
+java -version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Java not found! Please ensure Java is in your PATH.
+    pause
+    exit /b 1
+)
+
+:: Start FastAPI backend in a separate window
+echo [INFO] Launching Backend (FastAPI) on http://localhost:8000...
+start "InvenioAI Backend" cmd /k "set PYTHONPATH=%PYTHONPATH%;%CD%\backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+:: Wait for backend to initialize
+echo [INFO] Waiting for backend to be ready (5s)...
+timeout /t 5 /nobreak > nul
+
+:: Start Streamlit frontend
+echo [INFO] Launching Frontend (Streamlit) on http://localhost:7860...
+streamlit run frontend/streamlit_app.py --server.port 7860
+
+echo.
+echo [INFO] Done. If you close this window, the Frontend will stop.
+echo [INFO] Backend is running in a separate window.
+pause

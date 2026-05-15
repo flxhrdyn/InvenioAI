@@ -12,7 +12,7 @@ import shutil
 import threading
 import time
 import uuid
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Callable
 from qdrant_client import models
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-UploadJobState = Literal["pending", "running", "succeeded", "failed"]
+UploadJobState = Literal["pending", "running", "parsing", "indexing", "succeeded", "failed"]
 _upload_jobs_lock = threading.Lock()
 _upload_jobs: Dict[str, Dict[str, Any]] = {}
 
@@ -68,10 +68,13 @@ def _save_uploaded_pdf(file: UploadFile) -> str:
     return file_path
 
 
-def _index_uploaded_pdf(file_path: str) -> Dict[str, str]:
+def _index_uploaded_pdf(
+    file_path: str, 
+    status_callback: Optional[Callable[[str], None]] = None
+) -> Dict[str, str]:
     # Index into Qdrant.
     try:
-        index_documents(file_path)
+        index_documents(file_path, status_callback=status_callback)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
@@ -102,8 +105,13 @@ def _run_upload_job(job_id: str, file_path: str) -> None:
     job["updated_at"] = now
     _set_upload_job(job)
 
+    def status_callback(new_status: str):
+        job["status"] = new_status
+        job["updated_at"] = time.time()
+        _set_upload_job(job)
+
     try:
-        result = _index_uploaded_pdf(file_path)
+        result = _index_uploaded_pdf(file_path, status_callback=status_callback)
         now = time.time()
         job["status"] = "succeeded"
         job["result"] = result
@@ -200,12 +208,15 @@ def list_documents():
         try:
             points, next_offset = client.scroll(
                 collection_name=QDRANT_COLLECTION,
-                limit=256,
-                with_payload=True,
+                limit=1000,
+                with_payload=["metadata.source_file", "metadata.source"],
                 with_vectors=False,
                 offset=next_offset,
             )
         except Exception as exc:
+            # If collection is deleted while scrolling, just return what we have (or empty)
+            if "not found" in str(exc).lower() or "doesn't exist" in str(exc).lower():
+                break
             logger.exception("Failed to scroll Qdrant collection")
             raise HTTPException(status_code=500, detail=f"Failed to query Qdrant: {type(exc).__name__}: {exc}")
 
@@ -319,10 +330,11 @@ def delete_document(filename: str, retry: bool = True):
 
 @router.delete("/documents")
 def clear_documents():
-    """Delete all indexed documents.
+    """Delete all indexed documents and clear the semantic cache.
 
     - In Qdrant server/cloud mode: deletes the collection.
     - In local mode: removes the on-disk storage directory.
+    - Always clears the semantic and deep cache.
     """
 
     if os.path.exists(UPLOAD_DIR):
@@ -351,4 +363,12 @@ def clear_documents():
             detail=f"Failed to clear vector store: {type(exc).__name__}: {exc}",
         )
 
-    return {"status": "Documents and vector store cleared"}
+    # Clear semantic and deep cache to ensure fresh answers for new documents
+    try:
+        from .cache_manager import CacheManager
+        CacheManager().clear()
+        logger.info("Semantic and deep cache cleared.")
+    except Exception as e:
+        logger.warning(f"Could not clear semantic cache: {e}")
+
+    return {"status": "Documents, vector store, and cache cleared"}
