@@ -317,6 +317,36 @@ div[data-testid="stChatMessageAvatar"] {{
 button {{
     transition: all 0.2s ease !important;
 }}
+/* ── Table Styling ── */
+table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 1rem 0 !important;
+    font-size: 0.9rem !important;
+}
+
+th {
+    background-color: var(--invenio-bg-secondary) !important;
+    color: var(--invenio-accent) !important;
+    text-align: left !important;
+    padding: 10px !important;
+    border-bottom: 2px solid var(--invenio-border) !important;
+}
+
+td {
+    padding: 8px 10px !important;
+    border-bottom: 1px solid var(--invenio-border) !important;
+}
+
+tr:hover {
+    background-color: rgba(128, 128, 128, 0.05) !important;
+}
+
+/* Ensure horizontal scroll for wide tables */
+.stMarkdown div[style*="overflow-x: auto"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--invenio-border) transparent;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -633,7 +663,8 @@ if _is_chat_active():
                 for s in sources:
                     grouped[s['file']].append({
                         "text": s.get('text', ''),
-                        "page": s.get('page')
+                        "page": s.get('page'),
+                        "header": s.get('header')
                     })
                 
                 source_items = list(grouped.items())
@@ -644,10 +675,20 @@ if _is_chat_active():
                             for item in snippets:
                                 text = item["text"]
                                 page = item["page"]
+                                header = item.get("header")
+                                
+                                meta_parts = []
                                 if page:
-                                    st.caption(f"Page {page}")
-                                # Use a zero-width space to prevent Markdown from treating leading numbers as list items
-                                st.markdown(f"> \u200b{text.strip()}")
+                                    meta_parts.append(f"Page {page}")
+                                if header:
+                                    meta_parts.append(header)
+                                
+                                if meta_parts:
+                                    st.caption(" · ".join(meta_parts))
+                                    
+                                # Render as raw markdown (no blockquote) to ensure tables render correctly.
+                                # Wrap in a div to allow horizontal scrolling if tables are wide.
+                                st.markdown(f'<div style="overflow-x: auto;">\n{text.strip()}\n</div>', unsafe_allow_html=True)
 
 def run_streaming_query(prompt: str, history: list[str]):
     """Consume the SSE stream from the backend and update the UI in real-time."""

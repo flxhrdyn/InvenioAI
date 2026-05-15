@@ -34,6 +34,7 @@ def format_docs(docs: Iterable[Any]) -> Tuple[str, str, List[Dict[str, Any]]]:
             "file": filename,
             "text": doc.page_content,
             "page": metadata.get("page_number") or metadata.get("page", 0),
+            "header": metadata.get("Header 1") or metadata.get("Header 2") or metadata.get("Header 3") or "",
             "score": metadata.get("score", 0.0)
         })
 

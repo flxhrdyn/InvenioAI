@@ -11,8 +11,12 @@ import logging
 import time
 from pathlib import Path
 
-from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_opendataloader_pdf import OpenDataLoaderPDFLoader
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    MarkdownHeaderTextSplitter,
+    Language
+)
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import models
 from langchain_core.documents import Document
@@ -35,34 +39,60 @@ def _collection_exists(client, collection_name: str) -> bool:
 
 
 def process_pdf_documents(file_path: str) -> list[Document]:
-    """Load and chunk PDF documents using Recursive Character Splitter."""
+    """Load and chunk PDF documents using OpenDataLoader (Markdown) and Structure-Aware Splitting."""
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
         
-    loader = PyMuPDFLoader(file_path)
+    # Use OpenDataLoader for high-fidelity Markdown extraction
+    loader = OpenDataLoaderPDFLoader(
+        file_path=file_path,
+        format="markdown"
+    )
     docs = loader.load()
     
-    # Recursive Character Splitting (Fast & Structured)
-    text_splitter = RecursiveCharacterTextSplitter(
+    # Structure-Aware Splitting (Step 1: Headers)
+    headers_to_split_on = [
+        ("#", "Header 1"),
+        ("##", "Header 2"),
+        ("###", "Header 3"),
+    ]
+    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+    
+    final_chunks = []
+    
+    # Recursive Splitter for Markdown (Step 2: Size)
+    text_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=Language.MARKDOWN,
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", ". ", "! ", "? ", " ", ""],
         add_start_index=True
     )
     
-    chunked_docs = text_splitter.split_documents(docs)
-    
-    # Metadata Injection (Page Tracking)
     file_name = path.name
-    for doc in chunked_docs:
-        doc.metadata["source_file"] = file_name
-        # PyMuPDFLoader already adds 'page' to metadata (0-indexed)
-        # We ensure it's there and maybe make it 1-indexed for the UI later
-        if "page" in doc.metadata:
-            doc.metadata["page_number"] = doc.metadata["page"] + 1
+    for doc in docs:
+        # Split by headers
+        header_splits = markdown_splitter.split_text(doc.page_content)
+        
+        for split in header_splits:
+            # Further split by size while respecting Markdown structure
+            sub_chunks = text_splitter.create_documents(
+                [split.page_content], 
+                metadatas=[split.metadata]
+            )
             
-    return chunked_docs
+            for chunk in sub_chunks:
+                # Merge page/source metadata from original doc
+                chunk.metadata.update(doc.metadata)
+                chunk.metadata["source_file"] = file_name
+                
+                # Normalize page number (OpenDataLoader usually adds 'page' to metadata)
+                if "page" in chunk.metadata:
+                    chunk.metadata["page_number"] = chunk.metadata["page"] + 1
+                    
+                final_chunks.append(chunk)
+            
+    return final_chunks
 
 
 def index_documents(file_path: str) -> None:
