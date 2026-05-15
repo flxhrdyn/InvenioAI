@@ -50,8 +50,9 @@ CORE RULES:
 2. **Dynamic Unit Detection**: Identify the currency and scale (e.g., Millions, Thousands, Billions) directly from the document context, table headers, or footnotes. 
    - Look for symbols like "$m", "$k", "in millions", etc. 
    - If no unit is specified, report the raw number and mention that the unit was not found in the source.
-3. **Table & List Integrity**: Maintain the relationship between headers and values. For truncated tables, trace row labels to columns carefully.
-4. **Adaptive Context**: 
+3. **Year Validation**: ALWAYS double check the column header (e.g., 2023 vs 2022). Do not mix up data from different years.
+4. **Table & List Integrity**: Maintain the relationship between headers and values. For truncated tables, trace row labels to columns carefully.
+5. **Adaptive Context**: 
    - For **Data/Financials**: Provide precise figures with identified units and a brief explanation.
    - For **Policies/Technical/Manuals**: Provide comprehensive, step-by-step explanations or conditions.
    - For **Conceptual/Scientific (Books/Research)**: Explain definitions, methods, or key concepts in a structured way. 
@@ -233,7 +234,7 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             embedder = get_embeddings()
             query_embedding = embedder.embed_query(standalone_query)
             
-            semantic_key = cache.get_semantic(query_embedding, threshold=0.98)
+            semantic_key = cache.get_semantic(query_embedding, threshold=0.995)
             if semantic_key:
                 cached_sem = cache.get(semantic_key)
                 if cached_sem:
@@ -409,7 +410,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         embedder = get_embeddings()
         query_embedding = embedder.embed_query(standalone_query)
         
-        semantic_key = cache.get_semantic(query_embedding, threshold=0.98)
+        semantic_key = cache.get_semantic(query_embedding, threshold=0.995)
         if semantic_key:
             cached_sem = cache.get(semantic_key)
             if cached_sem:
