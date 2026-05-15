@@ -73,7 +73,7 @@ Instructions:
 2. Inside, use 4 Steps: 1. Deconstruction, 2. Retrieval, 3. Synthesis (Check Table vs Text), 4. Strategy.
 3. CLOSE the tag </thinking> before answering.
 4. Provide a professional, narrative answer in the SAME LANGUAGE as the question.
-5. Always cite sources at the end.
+5. DO NOT cite sources manually at the end (e.g., no "Sumber: ..." or "Source: ..."). The UI will handle this.
 
 Sources:
 {sources}
@@ -215,7 +215,7 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             embedder = get_embeddings()
             query_embedding = embedder.embed_query(standalone_query)
             
-            semantic_key = cache.get_semantic(query_embedding, threshold=0.90)
+            semantic_key = cache.get_semantic(query_embedding, threshold=0.98)
             if semantic_key:
                 cached_sem = cache.get(semantic_key)
                 if cached_sem:
@@ -391,7 +391,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         embedder = get_embeddings()
         query_embedding = embedder.embed_query(standalone_query)
         
-        semantic_key = cache.get_semantic(query_embedding, threshold=0.90)
+        semantic_key = cache.get_semantic(query_embedding, threshold=0.98)
         if semantic_key:
             cached_sem = cache.get(semantic_key)
             if cached_sem:
