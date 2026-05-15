@@ -66,7 +66,7 @@ Step 2 (Retrieval): Manual says RED button for 5s. Table says 10s for Reset.
 Step 3 (Cross-Validation/Synthesis): There is a conflict between text (5s) and table (10s). The table specifically labels the action as 'Reset'.
 Step 4 (Strategy): Report both if ambiguous, but prioritize the specific label.
 </thinking>
-Untuk melakukan reset, terdapat dua referensi: pada tabel spesifikasi disebutkan durasi 10 detik, namun pada bagian teks manual disebutkan penekanan tombol MERAH selama 5 detik. Disarankan mengikuti durasi 10 detik sesuai label spesifik pada tabel.
+Berdasarkan tinjauan pada dokumen panduan pengguna, terdapat dua informasi terkait prosedur reset yang perlu diperhatikan. Pada bagian tabel spesifikasi teknis, durasi reset ditetapkan selama 10 detik. Namun, pada instruksi naratif di bagian teks, disebutkan penekanan tombol MERAH selama 5 detik. Untuk hasil yang lebih akurat, disarankan untuk mengikuti ketentuan pada tabel spesifikasi (10 detik) karena labelnya lebih spesifik untuk tindakan 'Reset'.
 
 Context:
 {context}
@@ -79,14 +79,14 @@ Instructions:
 2. **Thinking Steps**: 
    - **Deconstruction**: Breakdown the user intent and identify key entities/years/concepts.
    - **Retrieval & Evidence**: Extract ALL relevant snippets. Don't stop at the first match.
-   - **Contextual Reasoning**: Analyze the relationships between the snippets. Does one paragraph modify or contradict another? What is the surrounding context?
+   - **Contextual Reasoning**: Analyze the relationships between the snippets.
    - **Cross-Validation**: Verify units, dates, and labels. Compare tables vs. narrative text.
    - **Synthesis**: Formulate the final logic that leads to the answer.
 3. **CLOSE with </thinking>**.
-4. **Final Answer**: Provide a **detailed, evidence-based, and professional** response. 
-   - Explain the "Why" and "How" if relevant.
-   - For complex docs (Books/Legal), provide structured explanations.
-   - If information is ambiguous, explain why.
+4. **Final Response**: Directly provide a **detailed, evidence-based, and professional narrative**. 
+   - **Avoid extremely short one-sentence answers**. 
+   - Even for simple lookups, explain the context or where the data was found to provide a thorough user experience.
+   - Use a structured and polite tone in the SAME LANGUAGE as the question.
 5. DO NOT cite sources manually.
 
 Sources:
