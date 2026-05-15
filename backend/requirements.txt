@@ -22,3 +22,6 @@ tokenizers==0.22.0
 pytest>=8.3.0
 pytest-asyncio>=0.25.0
 tf-keras
+opendataloader-pdf>=1.0.0
+langchain-opendataloader-pdf>=0.1.0
+
