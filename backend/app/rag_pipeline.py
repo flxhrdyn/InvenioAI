@@ -45,22 +45,28 @@ Standalone Question:
 RAG_PROMPT = """
 Answer the question using the provided context. Follow the instructions strictly.
 
-DATA RULES:
-1. **Table is King**: If a value is in a table, use it. ALWAYS double check the column header (e.g., 2023 vs 2022).
-2. **Column Alignment**: If a table looks truncated, look for the row label and count columns carefully. 
-3. **No Math**: Do NOT calculate if the final number is already there.
-4. **Units**: $m = juta, $b = miliar (in Indonesian).
+CORE RULES:
+1. **Absolute Accuracy**: Accuracy is the #1 priority. If the information is not in the context, say you don't know. DO NOT hallucinate or guess.
+2. **Dynamic Unit Detection**: Identify the currency and scale (e.g., Millions, Thousands, Billions) directly from the document context, table headers, or footnotes. 
+   - Look for symbols like "$m", "$k", "in millions", etc. 
+   - If no unit is specified, report the raw number and mention that the unit was not found in the source.
+3. **Table & List Integrity**: Maintain the relationship between headers and values. For truncated tables, trace row labels to columns carefully.
+4. **Adaptive Context**: 
+   - For **Data/Financials**: Provide precise figures with identified units and a brief explanation.
+   - For **Policies/Technical/Manuals**: Provide comprehensive, step-by-step explanations or conditions.
+   - For **Conceptual/Scientific (Books/Research)**: Explain definitions, methods, or key concepts in a structured way. 
+   - **Medical Caution**: For medical data, be extremely literal and precise. Never suggest actions; only report what is written.
 
-EXAMPLE OF CORRECT REASONING:
-Context: "Table: | Item | 2023 | 2022 | \n | Revenue | 15,433 | 16,136 |"
-User: "Berapa revenue 2023?"
+EXAMPLE OF ANALYSIS:
+Context: "User Manual: Press RED for 5s. Table: | Action | Duration | \n | Reset | 10s |"
+User: "Bagaimana cara reset?"
 <thinking>
-Step 1: Entity is Revenue, Year is 2023.
-Step 2: Table has two years: 2023 and 2022.
-Step 3: Column 2023 corresponds to 15,433. Column 2022 corresponds to 16,136.
-Step 4: The answer for 2023 is 15,433.
+Step 1 (Deconstruction): User asks for reset procedure.
+Step 2 (Retrieval): Manual says RED button for 5s. Table says 10s for Reset.
+Step 3 (Cross-Validation/Synthesis): There is a conflict between text (5s) and table (10s). The table specifically labels the action as 'Reset'.
+Step 4 (Strategy): Report both if ambiguous, but prioritize the specific label.
 </thinking>
-Revenue pada tahun 2023 adalah 15.433 juta.
+Untuk melakukan reset, terdapat dua referensi: pada tabel spesifikasi disebutkan durasi 10 detik, namun pada bagian teks manual disebutkan penekanan tombol MERAH selama 5 detik. Disarankan mengikuti durasi 10 detik sesuai label spesifik pada tabel.
 
 Context:
 {context}
@@ -69,11 +75,19 @@ Question:
 {question}
 
 Instructions:
-1. START with <thinking>...</thinking>.
-2. Inside, use 4 Steps: 1. Deconstruction, 2. Retrieval, 3. Synthesis (Check Table vs Text), 4. Strategy.
-3. CLOSE the tag </thinking> before answering.
-4. Provide a professional, narrative answer in the SAME LANGUAGE as the question.
-5. DO NOT cite sources manually at the end (e.g., no "Sumber: ..." or "Source: ..."). The UI will handle this.
+1. **START with <thinking>** and perform a deep, step-by-step analysis.
+2. **Thinking Steps**: 
+   - **Deconstruction**: Breakdown the user intent and identify key entities/years/concepts.
+   - **Retrieval & Evidence**: Extract ALL relevant snippets. Don't stop at the first match.
+   - **Contextual Reasoning**: Analyze the relationships between the snippets. Does one paragraph modify or contradict another? What is the surrounding context?
+   - **Cross-Validation**: Verify units, dates, and labels. Compare tables vs. narrative text.
+   - **Synthesis**: Formulate the final logic that leads to the answer.
+3. **CLOSE with </thinking>**.
+4. **Final Answer**: Provide a **detailed, evidence-based, and professional** response. 
+   - Explain the "Why" and "How" if relevant.
+   - For complex docs (Books/Legal), provide structured explanations.
+   - If information is ambiguous, explain why.
+5. DO NOT cite sources manually.
 
 Sources:
 {sources}
