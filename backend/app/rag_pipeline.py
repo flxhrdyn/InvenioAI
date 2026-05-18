@@ -77,13 +77,16 @@ Question:
 
 Instructions:
 1. **START with <thinking>** and perform a deep, step-by-step analysis.
-2. **Thinking Steps**: 
+2. **Thinking Format**: 
+   - Write each step on a NEW LINE as a clear bullet point (e.g., `- **Step 1 (Deconstruction)**: ...`).
+   - NEVER use single backticks (`) or triple backticks (```) anywhere inside the thinking block.
+3. **Thinking Steps**: 
    - **Deconstruction**: Breakdown the user intent and identify key entities/years/concepts.
    - **Retrieval & Evidence**: Extract ALL relevant snippets. Don't stop at the first match.
    - **Contextual Reasoning**: Analyze the relationships between the snippets.
    - **Cross-Validation**: Verify units, dates, and labels. Compare tables vs. narrative text.
    - **Synthesis**: Formulate the final logic that leads to the answer.
-3. **CLOSE with </thinking>**.
+4. **CLOSE with </thinking>**.
 4. **Final Response Formatting**: 
    - Provide a **concise, direct, and professional narrative** (around 2 to 4 sentences or a short paragraph).
    - **NO WORDINESS**: Do not be overly verbose or beat around the bush, but do not give a 1-sentence answer either. Get straight to the point while providing necessary context.
