@@ -15,7 +15,8 @@ from app.config import (
     HYBRID_DENSE_WEIGHT,
     HYBRID_SPARSE_WEIGHT,
     LLM_MODEL,
-    EMBEDDING_MODEL
+    EMBEDDING_MODEL,
+    NUM_FUSION_QUERIES
 )
 
 
@@ -48,7 +49,7 @@ def test_retrieval_parameters():
     assert isinstance(RERANK_TOP_K, int)
     assert RETRIEVAL_K > 0
     assert RERANK_TOP_K > 0
-    assert RERANK_TOP_K <= RETRIEVAL_K, "Rerank top k should be <= retrieval k"
+    assert RERANK_TOP_K <= RETRIEVAL_K * NUM_FUSION_QUERIES, "Rerank top k should be <= total retrieved k"
 
 
 def test_hybrid_retrieval_parameters():
@@ -112,4 +113,4 @@ class TestConfigurationIntegrity:
         assert CHUNK_OVERLAP < CHUNK_SIZE
         
         # Rerank top k should not exceed retrieval k
-        assert RERANK_TOP_K <= RETRIEVAL_K
+        assert RERANK_TOP_K <= RETRIEVAL_K * NUM_FUSION_QUERIES
