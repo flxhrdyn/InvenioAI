@@ -46,7 +46,7 @@ def process_pdf_documents(
         num_workers=4,
         verbose=True,
         language="en",
-        user_prompt="Please extract the content of this document with high fidelity. Pay special attention to tables and ensure they are formatted correctly in Markdown. Preserve the logical structure and headers of the document."
+        user_prompt="Please extract the content of this document with high fidelity. Pay special attention to tables and ensure they are formatted correctly in Markdown. Preserve the logical structure and headers of the document. DO NOT include any page headers, page footers, or page numbers in the extracted text. Exclude repeating document titles or copyright notices at the top or bottom of pages."
     )
     
     # 2. Load Documents (Cloud Parsing)
