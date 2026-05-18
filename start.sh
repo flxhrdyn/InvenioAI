@@ -18,7 +18,7 @@ BACKEND_PID=$!
 
 # 4. Wait for backend to finish preloading models
 echo "[INFO] Waiting for backend to finish preloading models..."
-while ! curl -s http://127.0.0.1:8000/ > /dev/null; do
+while ! python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=1)" 2>/dev/null; do
     sleep 2
 done
 echo "[INFO] Backend is ready!"
