@@ -104,7 +104,7 @@ INDEXING_BATCH_SIZE = _env_int("INVENIOAI_INDEXING_BATCH_SIZE", default=16, min_
 PRELOAD_EMBEDDINGS_ON_STARTUP = _env_bool("INVENIOAI_PRELOAD_EMBEDDINGS", default="1")
 
 # Retrieval
-RETRIEVAL_K = 5
+RETRIEVAL_K = 10
 
 # Hybrid retrieval (dense + sparse/lexical) settings.
 # Hybrid uses weighted reciprocal-rank fusion (RRF) or weighted fusion in Qdrant.
