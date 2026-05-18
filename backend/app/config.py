@@ -104,7 +104,7 @@ INDEXING_BATCH_SIZE = _env_int("INVENIOAI_INDEXING_BATCH_SIZE", default=16, min_
 PRELOAD_EMBEDDINGS_ON_STARTUP = _env_bool("INVENIOAI_PRELOAD_EMBEDDINGS", default="1")
 
 # Retrieval
-RETRIEVAL_K = 10
+RETRIEVAL_K = 7
 
 # Hybrid retrieval (dense + sparse/lexical) settings.
 # Hybrid uses weighted reciprocal-rank fusion (RRF) or weighted fusion in Qdrant.
@@ -120,7 +120,7 @@ RERANK_TOP_K = 5
 # Models
 LLM_MODEL = _env_str("INVENIOAI_LLM_MODEL", "llama-3.1-8b-instant")
 EMBEDDING_MODEL = _env_str("INVENIOAI_EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-RERANKER_MODEL = _env_str("INVENIOAI_RERANKER_MODEL", "ms-marco-MiniLM-L-6-v2")
+RERANKER_MODEL = _env_str("INVENIOAI_RERANKER_MODEL", "ms-marco-MultiBERT-L-12")
 
 # API Keys
 _groq_api_key = (os.getenv("GROQ_API_KEY") or "").strip()
