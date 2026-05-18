@@ -16,9 +16,12 @@ echo "[INFO] Starting FastAPI backend..."
 (cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000) &
 BACKEND_PID=$!
 
-# 4. Wait for backend
-echo "[INFO] Waiting for backend (5s)..."
-sleep 5
+# 4. Wait for backend to finish preloading models
+echo "[INFO] Waiting for backend to finish preloading models..."
+while ! curl -s http://127.0.0.1:8000/ > /dev/null; do
+    sleep 2
+done
+echo "[INFO] Backend is ready!"
 
 # 5. Start Streamlit frontend
 echo "[INFO] Starting Streamlit frontend..."
