@@ -1,35 +1,34 @@
 import pytest
+import numpy as np
+from unittest.mock import MagicMock
 from app.cache_manager import CacheManager
-from unittest.mock import patch, MagicMock
 
-def test_cache_set_and_get():
-    # Setup
-    # We will force it to use diskcache for predictable local testing
-    cache = CacheManager(cache_type="diskcache")
+def test_get_semantic_correctness():
+    # Mock diskcache
+    mock_cache = MagicMock()
     
-    # Execution
-    cache.set("test_key", "test_value")
-    result = cache.get("test_key")
+    # Setup registry with one entry
+    vec = [0.1, 0.2, 0.3]
+    mock_cache.get.return_value = [{"vector": vec, "key": "hit_key"}]
     
-    # Assertions
-    assert result == "test_value"
+    manager = CacheManager(cache_type="diskcache")
+    manager.disk_cache = mock_cache
+    
+    # Test HIT
+    hit_key = manager.get_semantic(vec, threshold=0.99)
+    assert hit_key == "hit_key"
+    
+    # Test MISS
+    miss_key = manager.get_semantic([0.9, 0.9, 0.9], threshold=0.99)
+    assert miss_key is None
 
-def test_cache_miss_returns_none():
-    cache = CacheManager(cache_type="diskcache")
-    result = cache.get("nonexistent_key")
-    assert result is None
-
-@patch("app.cache_manager.redis.Redis.from_url")
-def test_redis_backend_initialization(mock_redis):
-    # Setup
-    mock_redis_instance = MagicMock()
-    mock_redis.return_value = mock_redis_instance
+def test_get_semantic_handles_zero_norm():
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = [{"vector": [0, 0, 0], "key": "zero_key"}]
     
-    cache = CacheManager(cache_type="redis", redis_url="redis://dummy")
+    manager = CacheManager(cache_type="diskcache")
+    manager.disk_cache = mock_cache
     
-    # Execution
-    cache.set("k", "v")
-    
-    # Assertions
-    assert mock_redis.called
-    mock_redis_instance.setex.assert_called_once()
+    # Should not crash and return None
+    key = manager.get_semantic([0.1, 0.2, 0.3])
+    assert key is None

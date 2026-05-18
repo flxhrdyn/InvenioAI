@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace `PyMuPDFLoader` with `OpenDataLoaderPDFLoader` to improve table extraction and implement structure-aware chunking for RAG.
+**Goal:** Replace `PyMuPDFLoader` with `LlamaParse` to improve table extraction and implement structure-aware chunking for RAG.
 
-**Architecture:** Use `OpenDataLoaderPDF` as the local-first Java-based parsing engine. Extract documents as Markdown, then split them using `MarkdownHeaderTextSplitter` (for hierarchy) followed by `RecursiveCharacterTextSplitter` (for size) to preserve table integrity and context.
+**Architecture:** Use `LlamaParse` as the cloud-based parsing engine for high-fidelity Markdown extraction. Split documents using `MarkdownHeaderTextSplitter` (for hierarchy) followed by `RecursiveCharacterTextSplitter` (for size) to preserve table integrity and context.
 
-**Tech Stack:** `opendataloader-pdf`, `langchain-opendataloader-pdf`, `langchain`, `openjdk-17-jre-headless`.
+**Tech Stack:** `llama-parse`, `llama-index`, `langchain`.
 
 ---
 

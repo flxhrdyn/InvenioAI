@@ -27,4 +27,3 @@ tf-keras
 numpy>=1.26.0
 llama-parse
 llama-index
-langchain-opendataloader-pdf==2.0.0

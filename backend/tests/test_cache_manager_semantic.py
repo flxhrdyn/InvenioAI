@@ -60,11 +60,25 @@ def test_add_and_get_semantic_miss(temp_cache):
 
 def test_registry_limit(temp_cache):
     """Verify semantic registry size is capped at 1000."""
+    from unittest.mock import MagicMock
+    
+    mock_dict = {}
+    
+    def mock_get(key, default=None):
+        return mock_dict.get(key, default)
+        
+    def mock_set(key, value):
+        mock_dict[key] = value
+        
+    temp_cache.disk_cache = MagicMock()
+    temp_cache.disk_cache.get.side_effect = mock_get
+    temp_cache.disk_cache.set.side_effect = mock_set
+    
     for i in range(1100):
-        vec = [float(i)] * 384
+        vec = [float(i)]
         temp_cache.add_semantic(vec, f"key_{i}")
         
-    registry = temp_cache.disk_cache.get("semantic_registry")
+    registry = mock_dict.get("semantic_registry")
     assert len(registry) == 1000
     # Should keep the LATEST ones
     assert registry[-1]["key"] == "key_1099"

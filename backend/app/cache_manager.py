@@ -66,17 +66,21 @@ class CacheManager:
         import numpy as np
         # Ensure 1D array
         query_vec = np.array(query_embedding).flatten()
+        norm_a = np.linalg.norm(query_vec)
         
+        if norm_a == 0:
+            return None
+            
         best_score = -1.0
         best_key = None
         
         for entry in registry:
             entry_vec = np.array(entry["vector"]).flatten()
-            
-            norm_a = np.linalg.norm(query_vec)
             norm_b = np.linalg.norm(entry_vec)
-            if norm_a == 0 or norm_b == 0:
+            
+            if norm_b == 0:
                 continue
+                
             score = np.dot(query_vec, entry_vec) / (norm_a * norm_b)
             
             if score > best_score:
