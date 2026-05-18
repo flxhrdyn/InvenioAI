@@ -115,7 +115,7 @@ HYBRID_DENSE_WEIGHT = _env_float("INVENIOAI_HYBRID_DENSE_WEIGHT", default=0.5, m
 HYBRID_SPARSE_WEIGHT = _env_float("INVENIOAI_HYBRID_SPARSE_WEIGHT", default=0.5, min_value=0.0)
 
 # Reranking
-RERANK_TOP_K = 10
+RERANK_TOP_K = 5
 
 # Models
 LLM_MODEL = _env_str("INVENIOAI_LLM_MODEL", "llama-3.1-8b-instant")
