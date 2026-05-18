@@ -104,7 +104,7 @@ INDEXING_BATCH_SIZE = _env_int("INVENIOAI_INDEXING_BATCH_SIZE", default=16, min_
 PRELOAD_EMBEDDINGS_ON_STARTUP = _env_bool("INVENIOAI_PRELOAD_EMBEDDINGS", default="1")
 
 # Retrieval
-RETRIEVAL_K = 7
+RETRIEVAL_K = 10
 
 # Hybrid retrieval (dense + sparse/lexical) settings.
 # Hybrid uses weighted reciprocal-rank fusion (RRF) or weighted fusion in Qdrant.
@@ -131,4 +131,4 @@ CACHE_TYPE = _env_str("CACHE_TYPE", "diskcache") # 'redis' or 'diskcache'
 REDIS_URL = _env_str("REDIS_URL", "redis://localhost:6379/0")
 
 # RAG Fusion
-NUM_FUSION_QUERIES = _env_int("INVENIOAI_NUM_FUSION_QUERIES", default=2, min_value=1)
+NUM_FUSION_QUERIES = _env_int("INVENIOAI_NUM_FUSION_QUERIES", default=3, min_value=1)

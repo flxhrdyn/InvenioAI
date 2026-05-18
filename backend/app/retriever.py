@@ -10,6 +10,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 
 from langchain_core.documents import Document
+from langchain_core.prompts import PromptTemplate
 from langchain_classic.retrievers.multi_query import MultiQueryRetriever
 from langchain_groq import ChatGroq
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
@@ -21,6 +22,7 @@ from .config import (
     HYBRID_DENSE_WEIGHT,
     HYBRID_SPARSE_WEIGHT,
     LLM_MODEL,
+    NUM_FUSION_QUERIES,
     QDRANT_COLLECTION,
     RETRIEVAL_K,
     USE_HYBRID_SEARCH,
@@ -100,9 +102,15 @@ def build_retriever() -> Tuple[MultiQueryRetriever, QdrantVectorStore, QdrantCli
     )
 
     # MultiQuery Retriever
+    prompt = PromptTemplate(
+        input_variables=["question"],
+        template=f"You are an AI language model assistant. Your task is to generate {NUM_FUSION_QUERIES} different versions of the given user question to retrieve relevant documents from a vector database. By generating multiple perspectives on the user question, your goal is to help the user overcome some of the limitations of distance-based similarity search. Provide these alternative questions separated by newlines. Original question: {{question}}"
+    )
+
     retriever = MultiQueryRetriever.from_llm(
         retriever=base_retriever,
-        llm=llm
+        llm=llm,
+        prompt=prompt
     )
 
     logger.debug("Retriever ready (collection=%s, k=%s, mode=%s)", 
