@@ -52,7 +52,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 - **Framework**: FastAPI
 - **RAG Engine**: LangChain
 - **PDF Parser**: LlamaParse (High-fidelity Markdown extraction)
-- **LLM**: Llama 3.1 8B (Groq Cloud)
+- **LLM**: Llama 3.3 70B & Llama 3.1 8B (Groq Cloud)
 - **Reasoning**: Chain-of-Thought (CoT) structured 4-step protocol
 - **Embedding Model**: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 (Dense)
 - **Sparse Model**: Qdrant/bm42-all-minilm-l6-v2-attentions (Sparse)
