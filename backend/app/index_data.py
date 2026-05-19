@@ -22,7 +22,69 @@ from .qdrant_conn import get_qdrant_client
 
 from typing import Callable, Optional
 
+from collections import Counter
+
 logger = logging.getLogger(__name__)
+
+
+def strip_running_headers_footers(llama_docs: list) -> list:
+    """Mendeteksi dan menghapus running headers/footers secara otomatis.
+    Hanya menghapus baris jika terletak di posisi terluar (top 2 / bottom 2 lines)
+    pada banyak halaman, dan bukan merupakan heading markdown (#).
+    """
+    total_pages = len(llama_docs)
+    if total_pages < 3:
+        return llama_docs
+
+    top_line_counts = Counter()
+    bottom_line_counts = Counter()
+
+    # 1. Hitung frekuensi HANYA untuk baris di posisi terluar (top 2 / bottom 2)
+    for doc in llama_docs:
+        lines = [line.strip() for line in doc.text.split("\n") if line.strip()]
+        if not lines:
+            continue
+
+        # Periksa 2 baris teratas (calon Running Header)
+        for line in set(lines[:2]):
+            if not line.startswith("#"):  # Abaikan heading markdown asli
+                top_line_counts[line] += 1
+
+        # Periksa 2 baris terbawah (calon Running Footer)
+        if len(lines) > 2:
+            for line in set(lines[-2:]):
+                if not line.startswith("#"):  # Abaikan heading markdown asli
+                    bottom_line_counts[line] += 1
+
+    # 2. Tentukan threshold frekuensi tinggi (minimal muncul di 15% halaman)
+    threshold = max(3, int(total_pages * 0.15))
+    
+    running_headers = {line for line, count in top_line_counts.items() if count >= threshold}
+    running_footers = {line for line, count in bottom_line_counts.items() if count >= threshold}
+
+    # 3. Eksekusi penghapusan bersyarat hanya pada posisi terluar tiap halaman
+    for doc in llama_docs:
+        lines = doc.text.split("\n")
+        non_empty_indices = [i for i, line in enumerate(lines) if line.strip()]
+        
+        indices_to_remove = set()
+
+        # Cek apakah 2 baris teratas berisi running header terdeteksi
+        for idx in non_empty_indices[:2]:
+            if lines[idx].strip() in running_headers:
+                indices_to_remove.add(idx)
+
+        # Cek apakah 2 baris terbawah berisi running footer terdeteksi
+        if len(non_empty_indices) > 2:
+            for idx in non_empty_indices[-2:]:
+                if lines[idx].strip() in running_footers:
+                    indices_to_remove.add(idx)
+
+        # Rekonstruksi teks halaman tanpa baris noise tersebut
+        cleaned_lines = [line for idx, line in enumerate(lines) if idx not in indices_to_remove]
+        doc.text = "\n".join(cleaned_lines)
+
+    return llama_docs
 
 
 def process_pdf_documents(
@@ -46,11 +108,20 @@ def process_pdf_documents(
         num_workers=4,
         verbose=True,
         language="en",
-        user_prompt="Please extract the content of this document with high fidelity. Pay special attention to tables and ensure they are formatted correctly in Markdown. Preserve the logical structure and headers of the document."
+        user_prompt=(
+            "Please extract the content of this document with high fidelity. "
+            "Pay special attention to tables and ensure they are formatted correctly in Markdown. "
+            "Preserve the logical structure and headers of the document. "
+            "Strictly exclude and ignore repeating running headers, repeating page titles, "
+            "and page numbers at the top or bottom of pages from the main text body."
+        )
     )
     
     # 2. Load Documents (Cloud Parsing)
     llama_docs = parser.load_data(file_path)
+    
+    # Deteksi dan bersihkan running headers/footers secara otomatis
+    llama_docs = strip_running_headers_footers(llama_docs)
     
     all_header_splits = []
     
@@ -62,6 +133,9 @@ def process_pdf_documents(
     ]
     header_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
 
+    # State pelacakan header aktif untuk pewarisan lintas halaman
+    active_headers = {"Header 1": "", "Header 2": "", "Header 3": ""}
+
     for i, doc in enumerate(llama_docs):
         # Ambil nomor halaman dari metadata LlamaIndex (dimulai dari 1)
         page_num = doc.metadata.get("page_number", str(i + 1))
@@ -70,6 +144,30 @@ def process_pdf_documents(
         page_splits = header_splitter.split_text(doc.text)
         
         for split in page_splits:
+            # 1. Deteksi apakah split baru memperkenalkan header baru
+            introduced_h1 = split.metadata.get("Header 1", "")
+            introduced_h2 = split.metadata.get("Header 2", "")
+            introduced_h3 = split.metadata.get("Header 3", "")
+            
+            # Jika ada Header 1 baru, reset level di bawahnya
+            if introduced_h1:
+                active_headers["Header 1"] = introduced_h1
+                active_headers["Header 2"] = ""
+                active_headers["Header 3"] = ""
+            # Jika ada Header 2 baru, reset level di bawahnya
+            if introduced_h2:
+                active_headers["Header 2"] = introduced_h2
+                active_headers["Header 3"] = ""
+            # Jika ada Header 3 baru, perbarui
+            if introduced_h3:
+                active_headers["Header 3"] = introduced_h3
+                
+            # 2. Terapkan active_headers yang mengalir jika belum ada di split ini
+            for h_level in ["Header 1", "Header 2", "Header 3"]:
+                if not split.metadata.get(h_level) and active_headers[h_level]:
+                    split.metadata[h_level] = active_headers[h_level]
+
+            # 3. Update metadata esensial
             split.metadata.update({
                 "source": file_path,
                 "source_file": path.name,  # Essential for the /documents API
