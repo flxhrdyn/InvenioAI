@@ -142,6 +142,40 @@ def test_strip_running_headers_footers_ignores_markdown_headers_and_unique_conte
         assert "# 7. Income taxes" in page.text
 
 
+def test_strip_running_headers_footers_robust_substring_match():
+    """Verify that running headers and footers with minor variations (e.g. appended text/numbers) are stripped robustly."""
+    from app.index_data import strip_running_headers_footers
+    class MockDoc:
+        def __init__(self, text):
+            self.text = text
+
+    # We create 5 pages where the header matches exactly on 4 pages,
+    # but the 5th page has a minor suffix variation ("Financial Report 2023").
+    # The running header should be detected from the first 4 pages (crossing the 15% threshold for 5 pages),
+    # and the robust substring match should strip it on ALL pages, including the 5th page!
+    pages = [
+        MockDoc("Notes to the Syngenta AG Group\n\nPage 1 Content\n\nPage Footer"),
+        MockDoc("Notes to the Syngenta AG Group\n\nPage 2 Content\n\nPage Footer"),
+        MockDoc("Notes to the Syngenta AG Group\n\nPage 3 Content\n\nPage Footer"),
+        MockDoc("Notes to the Syngenta AG Group\n\nPage 4 Content\n\nPage Footer"),
+        MockDoc("Notes to the Syngenta AG Group Financial Report 2023\n\nPage 5 Content\n\nPage Footer 123"),
+    ]
+
+    cleaned = strip_running_headers_footers(pages)
+
+    for page in cleaned:
+        # Header should be fully removed on all pages
+        assert "Notes to the Syngenta AG Group" not in page.text
+        assert "Financial Report 2023" not in page.text
+        
+        # Footer (including dynamic numbers/suffixes) should be fully removed on all pages
+        assert "Page Footer" not in page.text
+        assert "123" not in page.text
+
+        # Body should remain
+        assert "Content" in page.text
+
+
 @patch("app.index_data.Path")
 @patch("llama_parse.LlamaParse")
 @patch("app.index_data.MarkdownHeaderTextSplitter")

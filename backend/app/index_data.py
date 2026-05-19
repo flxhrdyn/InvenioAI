@@ -71,18 +71,40 @@ def strip_running_headers_footers(llama_docs: list) -> list:
 
         # Cek apakah 2 baris teratas berisi running header terdeteksi
         for idx in non_empty_indices[:2]:
-            if lines[idx].strip() in running_headers:
+            line_str = lines[idx].strip()
+            is_match = line_str in running_headers
+            
+            # Cek robust substring match jika exact match gagal
+            if not is_match:
+                for rh in running_headers:
+                    if len(rh) >= 10 and (rh in line_str or line_str in rh):
+                        is_match = True
+                        break
+            if is_match:
                 indices_to_remove.add(idx)
 
         # Cek apakah 2 baris terbawah berisi running footer terdeteksi
         if len(non_empty_indices) > 2:
             for idx in non_empty_indices[-2:]:
-                if lines[idx].strip() in running_footers:
+                line_str = lines[idx].strip()
+                is_match = line_str in running_footers
+                
+                # Cek robust substring match jika exact match gagal
+                if not is_match:
+                    for rf in running_footers:
+                        if len(rf) >= 10 and (rf in line_str or line_str in rf):
+                            is_match = True
+                            break
+                if is_match:
                     indices_to_remove.add(idx)
 
         # Rekonstruksi teks halaman tanpa baris noise tersebut
         cleaned_lines = [line for idx, line in enumerate(lines) if idx not in indices_to_remove]
-        doc.text = "\n".join(cleaned_lines)
+        cleaned_text = "\n".join(cleaned_lines)
+        if hasattr(doc, "set_content"):
+            doc.set_content(cleaned_text)
+        else:
+            doc.text = cleaned_text
 
     return llama_docs
 

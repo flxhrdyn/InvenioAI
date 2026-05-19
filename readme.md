@@ -17,7 +17,7 @@
 
 In the era of information density, extracting precise answers from large PDF collections is critical. **InvenioAI** is a high-performance **Advanced RAG system** that implements a state-of-the-art **Hybrid architecture**.
 
-It transforms static PDF documents into a searchable, intelligent knowledge base, allowing users to ask complex questions and receive answers grounded in multi-stage retrieved context with verifiable source citations.
+It transforms static enterprise PDF documents into a searchable, intelligent knowledge base, allowing users to ask complex questions and receive answers grounded in multi-stage retrieved context with verifiable source citations.
 
 ## Live Demo
 
