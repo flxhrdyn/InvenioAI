@@ -25,21 +25,21 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 
 ## Technical Features
 
-### 📁 Ingestion & Document Processing
+### Ingestion & Document Processing
 - **Running Header/Footer Elimination**: Position-based boundary analysis that dynamically cleanses repetitive noise (page titles, section lines, and page numbers) from long PDFs without losing structural content.
 - **Structure-Aware Chunking**: Hierarchical text splitting combining `MarkdownHeaderTextSplitter` (heading levels H1-H3) and `RecursiveCharacterTextSplitter` to naturally preserve document outlines in vector payloads.
 - **Cross-Page Context Propagation**: Active header state machine that automatically inherits and propagates parent headings to continuation pages, preventing context starvation during retrieval.
 
-### 🔍 Retrieval & Search Precision
+### Retrieval & Search
 - **Hybrid Search**: Combines dense semantic retrieval (MMR) with server-side sparse vector search (BM42), fused natively in Qdrant for superior accuracy and scalability.
 - **RAG Fusion**: Implements Multi-Query generation to capture diverse user intents and improve retrieval coverage.
 - **Advanced Reranking**: Utilizes Cross-Encoder models (`ms-marco-MiniLM-L-12-v2`) via FlashRank to re-evaluate top candidates, ensuring the most relevant context is provided to the LLM.
 
-### 🧠 Logic & Intelligence Layer
+### Logic & Intelligence
 - **Chain-of-Thought (CoT) Reasoning**: Implements a 4-step structured reasoning protocol (Query Deconstruction, Filtering, Synthesis, Strategy) to ensure grounded and logical answers.
 - **Semantic Caching**: Dual-layer caching strategy (Exact Match + Semantic Similarity > 0.90) to eliminate redundant LLM API calls and provide near-instant responses for paraphrased queries.
 
-### 🚀 Core System & UX
+### Core System & UX
 - **Async Job Orchestration**: Background indexing and query execution with real-time status polling for a smooth user experience.
 - **Deep Analytics Dashboard**: Built-in metrics tracking for retrieval accuracy (nDCG, HitRate), latency, and API usage.
 - **Minimalist UI/UX**: Centered branding with 'Outfit' typography, glassmorphism aesthetics, and a streamlined Knowledge Base management interface.
