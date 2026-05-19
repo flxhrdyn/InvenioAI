@@ -25,6 +25,9 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 
 ## Technical Features
 
+- **Structure-Aware Chunking**: Hierarchical text splitting combining `MarkdownHeaderTextSplitter` (heading levels H1-H3) and `RecursiveCharacterTextSplitter` to naturally preserve document outlines in vector payloads.
+- **Running Header/Footer Elimination**: Position-based boundary analysis that dynamically cleanses repetitive noise (page titles, section lines, and page numbers) from long PDFs without losing heading structures.
+- **Cross-Page Context Propagation**: Active header state machine that automatically inherits and propagates parent headings to continuation pages, preventing context starvation during retrieval.
 - **Hybrid Search**: Combines dense semantic retrieval (MMR) with server-side sparse vector search (BM42), fused natively in Qdrant for superior accuracy and scalability.
 - **RAG Fusion**: Implements Multi-Query generation to capture diverse user intents and improve retrieval coverage.
 - **Advanced Reranking**: Utilizes Cross-Encoder models (`ms-marco-MiniLM-L-12-v2`) via FlashRank to re-evaluate top candidates, ensuring the most relevant context is provided to the LLM.
@@ -34,6 +37,7 @@ It transforms static PDF documents into a searchable, intelligent knowledge base
 - **Deep Analytics Dashboard**: Built-in metrics tracking for retrieval accuracy (nDCG, HitRate), latency, and API usage.
 - **Minimalist UI/UX**: Centered branding with 'Outfit' typography, glassmorphism aesthetics, and a streamlined Knowledge Base management interface.
 - **Cloud-Ready Architecture**: Ships with an all-in-one Docker configuration optimized for Hugging Face Spaces and Azure Container Apps.
+
 
 ## Technology Stack
 

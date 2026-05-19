@@ -15,6 +15,7 @@ InvenioAI is a high-performance Document Q&A system designed to transform static
 
 ### 🚀 Core Capabilities
 - **Advanced RAG Architecture**: Multi-query generation (RAG Fusion), Native Hybrid Search (Dense + BM42 Sparse), and **FlashRank Reranking** (ms-marco-MiniLM-L-12-v2).
+- **Structural Precision**: Integrated **MarkdownHeaderTextSplitter** with **Hierarchical Header Inheritance** and **Boundary Position-Aware Noise Removal** to guarantee flawless RAG accuracy on complex multi-page financial reports.
 - **Semantic Caching**: Dual-layer caching strategy with a high-performance semantic lookup (Cosine Similarity > 0.90) to eliminate redundant LLM API calls and provide near-instant responses.
 - **Chain-of-Thought (CoT)**: Structured 4-step reasoning protocol for high-fidelity response generation.
 - **Production-Ready UX**: Premium adaptive UI with 'Outfit' typography and a dedicated **Retrieval Metrics Dashboard** (nDCG, HitRate).
