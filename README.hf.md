@@ -14,7 +14,7 @@ pinned: false
 InvenioAI is a high-performance Document Q&A system designed to transform static PDFs into actionable knowledge. It implements an advanced RAG architecture with a heavy focus on retrieval precision and observability.
 
 ### 🚀 Core Capabilities
-- **Advanced RAG Architecture**: Multi-query generation (RAG Fusion), Native Hybrid Search (Dense + BM42 Sparse), and **FlashRank Reranking** (ms-marco-MultiBERT-L-12).
+- **Advanced RAG Architecture**: Multi-query generation (RAG Fusion), Native Hybrid Search (Dense + BM42 Sparse), and **FlashRank Reranking** (ms-marco-MiniLM-L-12-v2).
 - **Semantic Caching**: Dual-layer caching strategy with a high-performance semantic lookup (Cosine Similarity > 0.90) to eliminate redundant LLM API calls and provide near-instant responses.
 - **Chain-of-Thought (CoT)**: Structured 4-step reasoning protocol for high-fidelity response generation.
 - **Production-Ready UX**: Premium adaptive UI with 'Outfit' typography and a dedicated **Retrieval Metrics Dashboard** (nDCG, HitRate).
