@@ -239,7 +239,7 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             embedder = get_embeddings()
             query_embedding = embedder.embed_query(standalone_query)
             
-            semantic_key = cache.get_semantic(query_embedding, threshold=0.995)
+            semantic_key = cache.get_semantic(query_embedding, threshold=0.995, query_text=standalone_query)
             if semantic_key:
                 cached_sem = cache.get(semantic_key)
                 if cached_sem:
@@ -293,7 +293,7 @@ def rag_pipeline(question: str, history: Any) -> dict[str, Any]:
             cache.set(deep_key, result, ttl=3600)
             cache.set(quick_key, result, ttl=3600)
             # Store in semantic cache
-            cache.add_semantic(query_embedding, deep_key)
+            cache.add_semantic(query_embedding, deep_key, query_text=standalone_query)
             return result
         except Exception as exc:
             if attempt < (max_attempts - 1) and is_qdrant_client_closed_error(exc):
@@ -415,7 +415,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         embedder = get_embeddings()
         query_embedding = embedder.embed_query(standalone_query)
         
-        semantic_key = cache.get_semantic(query_embedding, threshold=0.995)
+        semantic_key = cache.get_semantic(query_embedding, threshold=0.995, query_text=standalone_query)
         if semantic_key:
             cached_sem = cache.get(semantic_key)
             if cached_sem:
@@ -558,7 +558,7 @@ async def rag_pipeline_stream_async(query: str, chat_history: list[str]):
         cache.set(deep_key, cache_data, ttl=3600)
         cache.set(quick_key, cache_data, ttl=3600)
         # Store in semantic cache
-        cache.add_semantic(query_embedding, deep_key)
+        cache.add_semantic(query_embedding, deep_key, query_text=standalone_query)
         
         yield json.dumps(final_result) + "\n"
 
