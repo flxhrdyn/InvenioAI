@@ -199,10 +199,22 @@ def process_pdf_documents(
             all_header_splits.append(split)
     
     # 4. Semantic/Length-based Splitting (Step 2)
-    # Using header_splits as input to ensure headers are preserved in chunks
+    # Using header_splits as input to ensure headers are preserved in chunks.
+    # IMPORTANT: We use separators that do NOT split inside markdown table rows.
+    # Markdown tables use single \n between rows — splitting on \n would tear
+    # table rows from their headers and produce incomplete, misleading chunks.
+    # By using \n\n (paragraph break) and \n| (new table start) as primary
+    # separators, we keep each table's rows together in one chunk.
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
+        separators=[
+            "\n\n\n",  # section breaks
+            "\n\n",    # paragraph breaks (keep tables intact)
+            "\n| ",   # only split at start of a new table row as last resort
+            " ",
+            "",
+        ],
         add_start_index=True,
     )
     
